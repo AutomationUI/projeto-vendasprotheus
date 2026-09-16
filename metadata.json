@@ -1,0 +1,8 @@
+{
+  "name": "Projeto Vendas Protheus",
+  "description": "CRM Autonomo e Gestao Comercial Omnichannel com operacao independente, pipeline visual de oportunidades, esteira de orcamentos e pedidos, catalogo com fotos e conectores multi-ERP.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
