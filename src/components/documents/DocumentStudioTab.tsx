@@ -44,6 +44,20 @@ import { DOCUMENT_PRESETS, MOCK_QUOTE_PREVIEW_DATA } from "@/lib/document-preset
 import { DynamicQuoteRenderer } from "./DynamicQuoteRenderer";
 import { VisualDocumentBuilder } from "./builder/VisualDocumentBuilder";
 
+const toValidHex = (colorStr?: string, defaultHex = "#ffffff"): string => {
+  if (!colorStr) return defaultHex;
+  if (colorStr === "transparent") return "#ffffff";
+  if (/^#[0-9a-fA-F]{6}$/.test(colorStr)) return colorStr;
+  if (/^[0-9a-fA-F]{6}$/.test(colorStr)) return `#${colorStr}`;
+  if (/^#[0-9a-fA-F]{3}$/.test(colorStr)) {
+    return "#" + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3];
+  }
+  if (/^[0-9a-fA-F]{3}$/.test(colorStr)) {
+    return "#" + colorStr[0] + colorStr[0] + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2];
+  }
+  return defaultHex;
+};
+
 const COLOR_PALETTES = [
   { name: "Navy & Platinum (Executivo)", primary: "#0f172a", secondary: "#334155", accent: "#0284c7", headerBg: "#0f172a" },
   { name: "Tech Indigo & Emerald", primary: "#4f46e5", secondary: "#065f46", accent: "#10b981", headerBg: "#4f46e5" },
@@ -71,10 +85,73 @@ export function DocumentStudioTab() {
   const [newPresetName, setNewPresetName] = useState<string>("");
   const [newPresetDesc, setNewPresetDesc] = useState<string>("");
 
+  // Auto-salvamento debounced para as configurações da aba marca
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "pending">("saved");
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Sync with store
   useEffect(() => {
     setSettings(getSettings());
   }, []);
+
+  const validateDimensions = (width: number, height: number, margin: number): { isValid: boolean; message: string } => {
+    if (width < 100 || width > 400) {
+      return { isValid: false, message: `Largura do documento (${width}mm) excede os limites permitidos (100mm a 400mm).` };
+    }
+    if (height < 100 || height > 500) {
+      return { isValid: false, message: `Altura do documento (${height}mm) excede os limites permitidos (100mm a 500mm).` };
+    }
+    if (margin < 5 || margin > 50) {
+      return { isValid: false, message: `Margem do documento (${margin}mm) excede os limites permitidos (5mm a 50mm).` };
+    }
+    return { isValid: true, message: "" };
+  };
+
+  const triggerDebouncedSettingsUpdate = (patch: Parameters<typeof updateSettings>[0]) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        ...patch,
+        templateConfig: patch.templateConfig ? { ...prev.templateConfig, ...patch.templateConfig } : prev.templateConfig,
+        documentConfig: patch.documentConfig ? { ...prev.documentConfig, ...patch.documentConfig } : prev.documentConfig,
+      };
+      return updated as AppSettings;
+    });
+
+    setAutoSaveStatus("pending");
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      const currentBase = getSettings();
+      const nextTemplateConfig = { ...currentBase.templateConfig, ...patch.templateConfig };
+
+      const w = nextTemplateConfig.documentWidthMm ?? 210;
+      const h = nextTemplateConfig.documentHeightMm ?? 297;
+      const m = nextTemplateConfig.documentMarginMm ?? 18;
+
+      const validation = validateDimensions(w, h, m);
+      if (!validation.isValid) {
+        toast({
+          variant: "destructive",
+          title: "Dimensões Inválidas!",
+          description: validation.message,
+        });
+        setAutoSaveStatus("pending");
+        return;
+      }
+
+      setAutoSaveStatus("saving");
+      updateSettings(patch);
+
+      const timeFormatted = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setLastSavedTime(timeFormatted);
+      setAutoSaveStatus("saved");
+    }, 750);
+  };
 
   // Se o modo for o Construtor Visual Dinâmico (Drag & Drop)
   if (studioMode === "visual") {
@@ -181,7 +258,7 @@ export function DocumentStudioTab() {
   // Section visibility toggle
   const handleToggleSection = (key: keyof typeof currentPreset.sections, value: any) => {
     const currentSections = settings.documentConfig.sections || currentPreset.sections;
-    updateSettings({
+    triggerDebouncedSettingsUpdate({
       documentConfig: {
         sections: {
           ...currentSections,
@@ -189,11 +266,24 @@ export function DocumentStudioTab() {
         }
       }
     });
-    setSettings(getSettings());
   };
 
   // Save changes
   const handleSaveAll = () => {
+    const w = settings.templateConfig.documentWidthMm ?? 210;
+    const h = settings.templateConfig.documentHeightMm ?? 297;
+    const m = settings.templateConfig.documentMarginMm ?? 18;
+
+    const validation = validateDimensions(w, h, m);
+    if (!validation.isValid) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao Salvar Layout!",
+        description: validation.message,
+      });
+      return;
+    }
+
     updateSettings(settings);
     toast({
       title: "Configurações de Layout Salvas!",
@@ -363,6 +453,28 @@ export function DocumentStudioTab() {
             <Printer className="w-3.5 h-3.5 text-slate-600" /> Testar Impressão / PDF
           </Button>
 
+          {/* Pill Indicador de Auto-salvamento (Debounce) */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all border shadow-2xs bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-800">
+            {autoSaveStatus === "pending" && (
+              <span className="text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>Salvar em 0,7s...</span>
+              </span>
+            )}
+            {autoSaveStatus === "saving" && (
+              <span className="text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400" />
+                <span>Auto-salvando...</span>
+              </span>
+            )}
+            {autoSaveStatus === "saved" && (
+              <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>{lastSavedTime ? `Salvo às ${lastSavedTime}` : "Salvo automaticamente"}</span>
+              </span>
+            )}
+          </div>
+
           {/* Salvar Global */}
           <Button
             size="sm"
@@ -398,7 +510,7 @@ export function DocumentStudioTab() {
                 </TabsList>
 
                 {/* ── ABA 1: ESTILO & ARQUÉTIPOS ── */}
-                <TabsContent value="estilo" className="p-5 space-y-6 max-h-[720px] overflow-y-auto">
+                <TabsContent value="estilo" className="p-5 space-y-6 max-h-[calc(100vh-160px)] overflow-y-auto">
                   {/* Arquétipo Visual */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -511,7 +623,7 @@ export function DocumentStudioTab() {
                       <div className="flex gap-2 items-center">
                         <Input
                           type="color"
-                          value={settings.templateConfig.primaryColor}
+                          value={toValidHex(settings.templateConfig.primaryColor, "#0f172a")}
                           onChange={(e) => {
                             updateSettings({ templateConfig: { primaryColor: e.target.value } });
                             setSettings(getSettings());
@@ -519,7 +631,7 @@ export function DocumentStudioTab() {
                           className="w-10 h-8 p-1 cursor-pointer"
                         />
                         <Input
-                          value={settings.templateConfig.primaryColor}
+                          value={toValidHex(settings.templateConfig.primaryColor, "#0f172a")}
                           onChange={(e) => {
                             updateSettings({ templateConfig: { primaryColor: e.target.value } });
                             setSettings(getSettings());
@@ -534,7 +646,7 @@ export function DocumentStudioTab() {
                       <div className="flex gap-2 items-center">
                         <Input
                           type="color"
-                          value={settings.templateConfig.accentColor || "#0284c7"}
+                          value={toValidHex(settings.templateConfig.accentColor, "#0284c7")}
                           onChange={(e) => {
                             updateSettings({ templateConfig: { accentColor: e.target.value } });
                             setSettings(getSettings());
@@ -542,7 +654,7 @@ export function DocumentStudioTab() {
                           className="w-10 h-8 p-1 cursor-pointer"
                         />
                         <Input
-                          value={settings.templateConfig.accentColor || "#0284c7"}
+                          value={toValidHex(settings.templateConfig.accentColor, "#0284c7")}
                           onChange={(e) => {
                             updateSettings({ templateConfig: { accentColor: e.target.value } });
                             setSettings(getSettings());
@@ -618,7 +730,7 @@ export function DocumentStudioTab() {
                 </TabsContent>
 
                 {/* ── ABA 2: SEÇÕES & BLOCOS DINÂMICOS ── */}
-                <TabsContent value="secoes" className="p-5 space-y-6 max-h-[720px] overflow-y-auto">
+                <TabsContent value="secoes" className="p-5 space-y-6 max-h-[calc(100vh-160px)] overflow-y-auto">
                   {/* Cabeçalho */}
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Cabeçalho & Identidade</h4>
@@ -782,7 +894,7 @@ export function DocumentStudioTab() {
                 </TabsContent>
 
                 {/* ── ABA 3: DADOS DA EMPRESA ── */}
-                <TabsContent value="empresa" className="p-5 space-y-4 max-h-[720px] overflow-y-auto">
+                <TabsContent value="empresa" className="p-5 space-y-4 max-h-[calc(100vh-160px)] overflow-y-auto">
                   <div className="space-y-3">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Identificação Comercial
@@ -793,8 +905,7 @@ export function DocumentStudioTab() {
                       <Input
                         value={settings.templateConfig.logoText}
                         onChange={(e) => {
-                          updateSettings({ templateConfig: { logoText: e.target.value } });
-                          setSettings(getSettings());
+                          triggerDebouncedSettingsUpdate({ templateConfig: { logoText: e.target.value } });
                         }}
                         placeholder="Ex: VendasProtheus ERP"
                       />
@@ -805,8 +916,7 @@ export function DocumentStudioTab() {
                       <Input
                         value={settings.templateConfig.empresaRazaoSocial || ""}
                         onChange={(e) => {
-                          updateSettings({ templateConfig: { empresaRazaoSocial: e.target.value } });
-                          setSettings(getSettings());
+                          triggerDebouncedSettingsUpdate({ templateConfig: { empresaRazaoSocial: e.target.value } });
                         }}
                         placeholder="Ex: VendasProtheus Automação Comercial S/A"
                       />
@@ -818,8 +928,7 @@ export function DocumentStudioTab() {
                         <Input
                           value={settings.templateConfig.empresaCnpj}
                           onChange={(e) => {
-                            updateSettings({ templateConfig: { empresaCnpj: e.target.value } });
-                            setSettings(getSettings());
+                            triggerDebouncedSettingsUpdate({ templateConfig: { empresaCnpj: e.target.value } });
                           }}
                         />
                       </div>
@@ -828,8 +937,7 @@ export function DocumentStudioTab() {
                         <Input
                           value={settings.templateConfig.empresaInscricaoEstadual || ""}
                           onChange={(e) => {
-                            updateSettings({ templateConfig: { empresaInscricaoEstadual: e.target.value } });
-                            setSettings(getSettings());
+                            triggerDebouncedSettingsUpdate({ templateConfig: { empresaInscricaoEstadual: e.target.value } });
                           }}
                         />
                       </div>
@@ -841,8 +949,7 @@ export function DocumentStudioTab() {
                         <Input
                           value={settings.templateConfig.empresaTelefone}
                           onChange={(e) => {
-                            updateSettings({ templateConfig: { empresaTelefone: e.target.value } });
-                            setSettings(getSettings());
+                            triggerDebouncedSettingsUpdate({ templateConfig: { empresaTelefone: e.target.value } });
                           }}
                         />
                       </div>
@@ -851,8 +958,7 @@ export function DocumentStudioTab() {
                         <Input
                           value={settings.templateConfig.empresaEmail}
                           onChange={(e) => {
-                            updateSettings({ templateConfig: { empresaEmail: e.target.value } });
-                            setSettings(getSettings());
+                            triggerDebouncedSettingsUpdate({ templateConfig: { empresaEmail: e.target.value } });
                           }}
                         />
                       </div>
@@ -863,8 +969,7 @@ export function DocumentStudioTab() {
                       <Input
                         value={settings.templateConfig.empresaEndereco}
                         onChange={(e) => {
-                          updateSettings({ templateConfig: { empresaEndereco: e.target.value } });
-                          setSettings(getSettings());
+                          triggerDebouncedSettingsUpdate({ templateConfig: { empresaEndereco: e.target.value } });
                         }}
                         placeholder="Logradouro, número, complemento"
                       />
@@ -876,8 +981,7 @@ export function DocumentStudioTab() {
                         <Input
                           value={settings.templateConfig.empresaCidadeEstado || ""}
                           onChange={(e) => {
-                            updateSettings({ templateConfig: { empresaCidadeEstado: e.target.value } });
-                            setSettings(getSettings());
+                            triggerDebouncedSettingsUpdate({ templateConfig: { empresaCidadeEstado: e.target.value } });
                           }}
                           placeholder="São Paulo - SP | CEP: 01310-100"
                         />
@@ -887,18 +991,75 @@ export function DocumentStudioTab() {
                         <Input
                           value={settings.templateConfig.empresaSite || ""}
                           onChange={(e) => {
-                            updateSettings({ templateConfig: { empresaSite: e.target.value } });
-                            setSettings(getSettings());
+                            triggerDebouncedSettingsUpdate({ templateConfig: { empresaSite: e.target.value } });
                           }}
                           placeholder="www.suaempresa.com.br"
                         />
+                      </div>
+                    </div>
+
+                    {/* Dimensões e Margens do Documento */}
+                    <div className="space-y-3 pt-3 border-t">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
+                        Dimensões e Margens do Documento (mm)
+                      </Label>
+                      
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Largura (mm)</Label>
+                          <Input
+                            type="number"
+                            min="100"
+                            max="400"
+                            value={settings.templateConfig.documentWidthMm ?? 210}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              triggerDebouncedSettingsUpdate({ templateConfig: { documentWidthMm: val } });
+                            }}
+                            className="h-9 text-xs"
+                          />
+                          <span className="text-[10px] text-slate-400">Min 100 | Max 400</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Altura (mm)</Label>
+                          <Input
+                            type="number"
+                            min="100"
+                            max="500"
+                            value={settings.templateConfig.documentHeightMm ?? 297}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              triggerDebouncedSettingsUpdate({ templateConfig: { documentHeightMm: val } });
+                            }}
+                            className="h-9 text-xs"
+                          />
+                          <span className="text-[10px] text-slate-400">Min 100 | Max 500</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Margem (mm)</Label>
+                          <Input
+                            type="number"
+                            min="5"
+                            max="50"
+                            value={settings.templateConfig.documentMarginMm ?? 18}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              triggerDebouncedSettingsUpdate({ templateConfig: { documentMarginMm: val } });
+                            }}
+                            className="h-9 text-xs"
+                          />
+                          <span className="text-[10px] text-slate-400">Min 5 | Max 50</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </TabsContent>
 
                 {/* ── ABA 4: PIX, CONDIÇÕES & TERMOS ── */}
-                <TabsContent value="pagamento" className="p-5 space-y-4 max-h-[720px] overflow-y-auto">
+                <TabsContent value="pagamento" className="p-5 space-y-4 max-h-[calc(100vh-160px)] overflow-y-auto">
                   <div className="space-y-3">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Configuração de PIX
@@ -953,8 +1114,7 @@ export function DocumentStudioTab() {
                       value={settings.documentConfig.sections?.bankDetailsText ?? settings.documentConfig.dadosBancarios}
                       onChange={(e) => {
                         handleToggleSection("bankDetailsText", e.target.value);
-                        updateSettings({ documentConfig: { dadosBancarios: e.target.value } });
-                        setSettings(getSettings());
+                        triggerDebouncedSettingsUpdate({ documentConfig: { dadosBancarios: e.target.value } });
                       }}
                       className="h-20 resize-none text-xs font-mono"
                       placeholder="Banco, Agência, Conta Corrente..."
@@ -1003,8 +1163,7 @@ export function DocumentStudioTab() {
                       value={settings.documentConfig.sections?.footerText ?? settings.templateConfig.textoRodape}
                       onChange={(e) => {
                         handleToggleSection("footerText", e.target.value);
-                        updateSettings({ templateConfig: { textoRodape: e.target.value } });
-                        setSettings(getSettings());
+                        triggerDebouncedSettingsUpdate({ templateConfig: { textoRodape: e.target.value } });
                       }}
                       className="h-16 resize-none text-xs"
                     />
@@ -1016,7 +1175,7 @@ export function DocumentStudioTab() {
         )}
 
         {/* ── PAINEL DE VISUALIZAÇÃO AO VIVO EM TEMPO REAL (7 colunas ou 12 colunas) ── */}
-        <div className={`${viewMode === "split" ? "lg:col-span-7" : "col-span-1"} flex flex-col items-center bg-slate-100 dark:bg-slate-950 p-4 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 overflow-x-auto min-h-[780px]`}>
+        <div className={`${viewMode === "split" ? "lg:col-span-7" : "col-span-1"} flex flex-col items-center bg-slate-100 dark:bg-slate-950 p-4 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 overflow-x-auto min-h-[calc(100vh-160px)]`}>
           
           {/* Header da Preview com Régua e Alternador de Dados */}
           <div className="w-full max-w-[210mm] flex items-center justify-between mb-4 px-2 text-xs text-slate-500">

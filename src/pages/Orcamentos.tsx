@@ -34,6 +34,7 @@ import { Mail } from "lucide-react";
 import { localDB } from "@/lib/local-db";
 import { DynamicQuoteRenderer } from "@/components/documents/DynamicQuoteRenderer";
 import { QuoteDocumentData } from "@/types/document-template";
+import "./orcamentos-print.css";
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -303,15 +304,20 @@ export default function OrcamentosPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 orcamentos-dashboard">
       <PageHeader
         title="Orçamentos de Venda"
         subtitle="Gerencie propostas comerciais e orçamentos"
-        actions={<Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Novo Orçamento</Button>}
+        actions={
+          <>
+            <Button onClick={() => window.print()} variant="outline" className="gap-2 print-hide"><Printer className="h-4 w-4" /> Imprimir Relatório</Button>
+            <Button onClick={openNew} className="gap-2 print-hide"><Plus className="h-4 w-4" /> Novo Orçamento</Button>
+          </>
+        }
       />
 
       <Card className="card-premium border-0">
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 print-hide">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <div className="flex gap-2 flex-1 w-full sm:w-auto">
               <div className="relative flex-1">
@@ -347,7 +353,7 @@ export default function OrcamentosPage() {
                 <TableHead>Validade</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-32" />
+                <TableHead className="w-32 print-hide" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -365,8 +371,8 @@ export default function OrcamentosPage() {
                   </TableCell>
                   <TableCell className="text-right font-bold">{fmt(q.valor)}</TableCell>
                   <TableCell><StatusBadge status={q.status} /></TableCell>
-                  <TableCell>
-                    <div className="flex gap-0.5">
+                  <TableCell className="print-hide">
+                    <div className="flex gap-0.5 print-hide">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedQuote(q)} title="Visualizar"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => handleConvertToOrder(q)} title="Converter em Pedido"><ShoppingCart className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSendQuote(q)} title="Enviar por Email/WhatsApp"><Mail className="h-3.5 w-3.5 text-blue-600" /></Button>

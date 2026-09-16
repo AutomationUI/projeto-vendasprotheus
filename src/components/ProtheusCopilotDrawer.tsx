@@ -12,13 +12,18 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { customers } from "@/lib/mock-data";
+import { useUIStore } from "@/store/use-ui-store";
 
 interface ProtheusCopilotDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ProtheusCopilotDrawer({ open, onOpenChange }: ProtheusCopilotDrawerProps) {
+export function ProtheusCopilotDrawer({ open: propOpen, onOpenChange: propOnOpenChange }: ProtheusCopilotDrawerProps) {
+  const { isCopilotOpen, setCopilotOpen } = useUIStore();
+
+  const open = propOpen !== undefined ? propOpen : isCopilotOpen;
+  const onOpenChange = propOnOpenChange !== undefined ? propOnOpenChange : setCopilotOpen;
   // Tab 1: Simulador de Margem & Alçadas
   const [basePrice, setBasePrice] = useState<number>(10000);
   const [costPrice, setCostPrice] = useState<number>(5500);

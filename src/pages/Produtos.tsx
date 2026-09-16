@@ -19,7 +19,11 @@ import {
   Link2,
   Lock,
   CheckCircle2,
+  Download,
+  FileText,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,6 +220,87 @@ export default function ProdutosPage() {
     const matchLowStock = !isLowStockFilter || p.estoque <= p.estoqueMinimo;
     return matchSearch && matchCat && matchLowStock;
   });
+
+  const exportToExcel = () => {
+    const headers = [
+      "Código",
+      "Nome",
+      "Categoria",
+      "Preço de Venda (R$)",
+      "Custo (R$)",
+      "Estoque Atual",
+      "Estoque Mínimo",
+      "Unidade",
+      "Média Venda Mensal"
+    ];
+
+    const rows = filtered.map((p) => [
+      p.codigo,
+      p.nome,
+      p.categoria,
+      p.preco,
+      p.custo,
+      p.estoque,
+      p.estoqueMinimo,
+      p.unidade,
+      p.mediaVendaMensal
+    ]);
+
+    const aoa = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Catálogo de Produtos");
+    XLSX.writeFile(wb, `catalogo_produtos_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    toast({
+      title: "Sucesso!",
+      description: `Exportados ${filtered.length} produtos em formato Excel (.xlsx).`,
+    });
+  };
+
+  const exportToCSV = () => {
+    const headers = [
+      "Codigo",
+      "Nome",
+      "Categoria",
+      "Preco de Venda",
+      "Custo",
+      "Estoque Atual",
+      "Estoque Minimo",
+      "Unidade",
+      "Media Venda Mensal"
+    ];
+
+    const rows = filtered.map((p) => [
+      p.codigo,
+      p.nome,
+      p.categoria,
+      p.preco,
+      p.custo,
+      p.estoque,
+      p.estoqueMinimo,
+      p.unidade,
+      p.mediaVendaMensal
+    ]);
+
+    const aoa = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const csvContent = XLSX.utils.sheet_to_csv(ws);
+    
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `catalogo_produtos_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Sucesso!",
+      description: `Exportados ${filtered.length} produtos em formato CSV.`,
+    });
+  };
 
   const openNewProduct = async () => {
     const nextCodeNum = products.length + 1;
@@ -595,6 +680,41 @@ export default function ProdutosPage() {
                 {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
+
+            {/* Export options */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5 px-3">
+                  <Download className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Exportar</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1.5" align="end">
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={exportToExcel}
+                    className="justify-start text-xs h-8 text-slate-700 dark:text-slate-300 font-normal hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-2 text-emerald-600" />
+                    Excel (.xlsx)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={exportToCSV}
+                    className="justify-start text-xs h-8 text-slate-700 dark:text-slate-300 font-normal hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                    CSV (.csv)
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {/* View toggle */}
             <div className="flex border rounded-lg overflow-hidden h-9 shrink-0">
               <button onClick={() => setView("cards")} className={cn("px-3 flex items-center gap-1.5 text-xs font-medium transition-colors", view === "cards" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground")}>

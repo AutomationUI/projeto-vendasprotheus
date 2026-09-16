@@ -478,7 +478,7 @@ export function DocumentCodeEditorView({
       </div>
 
       {/* ── CORPO PRINCIPAL DO EDITOR ── */}
-      <div className="flex-1 flex flex-col min-h-[500px]">
+      <div className="flex-1 flex flex-col min-h-[calc(100vh-220px)]">
         
         {/* Status de Validação e Modificação do JSON */}
         {currentFormat === "json" && (
@@ -573,7 +573,7 @@ export function DocumentCodeEditorView({
               }
             }}
             placeholder={currentFormat === "json" ? "Cole ou edite a estrutura JSON aqui..." : "Edite a marcação HTML aqui..."}
-            className="w-full flex-1 min-h-[480px] p-4 font-mono text-xs leading-relaxed bg-slate-950 text-emerald-400 dark:bg-slate-950 dark:text-emerald-300 border border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 shadow-inner resize-none select-text"
+            className="w-full flex-1 min-h-[calc(100vh-250px)] p-4 font-mono text-xs leading-relaxed bg-slate-950 text-emerald-400 dark:bg-slate-950 dark:text-emerald-300 border border-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 shadow-inner resize-none select-text"
             spellCheck={false}
           />
         </div>

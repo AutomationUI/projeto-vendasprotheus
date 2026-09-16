@@ -55,6 +55,9 @@ export interface AppSettings {
     empresaSite?: string;
     textoRodape: string;
     activePresetId?: string;
+    documentWidthMm?: number;
+    documentHeightMm?: number;
+    documentMarginMm?: number;
   };
   /** Configuration for standard forms and document display */
   documentConfig: {
@@ -120,6 +123,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     empresaSite: "www.vendasprotheus.com.br",
     textoRodape: "Proposta gerada eletronicamente pelo Sistema de Gestão Comercial e ERP Protheus. Documento confidencial.",
     activePresetId: "preset-executivo",
+    documentWidthMm: 210,
+    documentHeightMm: 297,
+    documentMarginMm: 18,
   },
   documentConfig: {
     mostrarMargem: true,

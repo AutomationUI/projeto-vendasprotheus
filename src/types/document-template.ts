@@ -72,6 +72,12 @@ export interface DocumentCustomSections {
   showDigitalStamp: boolean;
   termsOfAcceptance: string;
 
+  // Ações Interativas (Portal Web)
+  showInteractiveActions?: boolean;
+  interactiveActionsAlignment?: "left" | "center" | "right";
+  showWhatsappButton?: boolean;
+  showApproveButton?: boolean;
+
   // Rodapé
   showFooter: boolean;
   footerText: string;
@@ -118,7 +124,92 @@ export type DocumentBlockType =
   | "divider" 
   | "spacer" 
   | "custom_html" 
-  | "footer";
+  | "footer"
+  | "custom_block"
+  | "reusable_block";
+
+export type BlockInternalElementType = 
+  | "variable"
+  | "text"
+  | "heading"
+  | "image"
+  | "badge"
+  | "button"
+  | "shape"
+  | "divider";
+
+export type ButtonActionType = 
+  | "link"            // Abrir link externo em nova aba ou na mesma aba
+  | "whatsapp"        // Iniciar conversa no WhatsApp com texto formatado
+  | "approve_quote"   // Aprovar Proposta Comercial (CTA interativo no portal web)
+  | "reject_quote"    // Recusar Proposta com motivo/feedback
+  | "copy_pix"        // Copiar chave ou código PIX para a área de transferência
+  | "print_pdf"       // Imprimir ou salvar em PDF
+  | "email_seller"    // Enviar e-mail diretamente ao consultor de vendas
+  | "scroll_to_block" // Rolar suavemente até uma seção específica (ex: aceite/assinatura)
+  | "download_file";  // Baixar anexo ou catálogo técnico
+
+export interface ButtonActionConfig {
+  actionType: ButtonActionType;
+  url?: string;
+  openInNewTab?: boolean;
+  phone?: string;
+  messageTemplate?: string;
+  pixKey?: string;
+  pixQrCodeUrl?: string;
+  emailTo?: string;
+  emailSubject?: string;
+  emailBody?: string;
+  targetBlockId?: string;
+  downloadUrl?: string;
+  fileName?: string;
+  confirmationMessage?: string;
+  variant?: "primary" | "secondary" | "success" | "outline" | "danger";
+}
+
+export interface BlockInternalElementStyle {
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderWidth?: number; // px
+  borderRadius?: number; // px
+  fontSize?: number; // px
+  fontWeight?: "normal" | "medium" | "semibold" | "bold";
+  textAlign?: "left" | "center" | "right";
+  opacity?: number;
+  boxShadow?: string;
+  padding?: number;
+  letterSpacing?: string;
+}
+
+export interface BlockInternalElement {
+  id: string;
+  type: BlockInternalElementType;
+  name?: string;
+  x: number; // Posição X em pixels relativa ao topo-esquerda do bloco
+  y: number; // Posição Y em pixels relativa ao topo-esquerda do bloco
+  width: number; // Largura em pixels
+  height: number; // Altura em pixels
+  zIndex: number; // Camada de profundidade (sobreposição)
+  content?: string; // Conteúdo textual ou Markdown com tags {{...}}
+  variableTag?: string; // Tag da variável ex: {{cliente.nome}}
+  style?: BlockInternalElementStyle;
+  buttonConfig?: ButtonActionConfig;
+  config?: Record<string, any>;
+}
+
+export interface ReusableBlockTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: "comercial" | "financeiro" | "conteudo" | "layout" | "personalizado";
+  iconName?: string;
+  isCustom?: boolean;
+  version?: number;
+  createdAt: string;
+  updatedAt?: string;
+  block: DocumentBlock;
+}
 
 export interface DocumentBlockStyle {
   backgroundColor?: string;
@@ -137,9 +228,12 @@ export interface DocumentBlockStyle {
   fontSize?: number; // px (e.g. 12, 14, 16, 18, 24, 32)
   fontWeight?: "normal" | "medium" | "bold" | "black";
   fontFamily?: "sans" | "serif" | "mono";
-  width?: "full" | "1/2" | "1/3" | "2/3" | "1/4" | "3/4";
+  width?: "full" | "1/2" | "1/3" | "2/3" | "1/4" | "3/4" | "1/5" | "2/5" | "3/5" | "4/5";
+  customWidthPercent?: number; // Largura percentual customizada de 15 a 100%
+  minHeight?: number; // Altura mínima em pixels
   shadow?: "none" | "sm" | "md" | "lg";
   opacity?: number;
+  zIndex?: number; // Ordem da camada de sobreposição do bloco
 }
 
 export interface DocumentBlock {
@@ -148,8 +242,15 @@ export interface DocumentBlock {
   title?: string;
   content?: string; // Texto, Markdown ou HTML com tags {{...}}
   config?: Record<string, any>; // Configurações customizadas do bloco
+  buttonConfig?: ButtonActionConfig; // Configurações de ação para blocos do tipo botão ou CTA
   style?: DocumentBlockStyle;
   hidden?: boolean;
+  zIndex?: number; // Ordem da camada no layout
+  elements?: BlockInternalElement[]; // Elementos internos com posições relativas livres
+  isReusable?: boolean;
+  isComposed?: boolean;
+  libraryBlockId?: string; // ID de referência na biblioteca de blocos
+  version?: number;
 }
 
 export interface QuoteDocumentData {

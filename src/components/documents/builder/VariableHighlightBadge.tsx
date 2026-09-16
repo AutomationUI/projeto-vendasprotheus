@@ -59,7 +59,7 @@ export function VariableHighlightBadge({
       role="button"
       tabIndex={0}
       title={`Variável: ${tag} (${theme.label}) - Arraste para reposicionar ou clique para selecionar`}
-      className={`relative group/var inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-all cursor-grab active:cursor-grabbing select-none font-medium border ${
+      className={`relative group/var inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-all cursor-grab active:cursor-grabbing select-none font-medium border max-w-full overflow-hidden ${
         theme.badgeBg
       } ${theme.badgeText} ${theme.badgeBorder} ${
         isSelected ? "ring-2 ring-offset-1 ring-indigo-600 scale-[1.02] shadow-sm font-bold" : "hover:shadow-xs hover:scale-[1.01]"
@@ -69,12 +69,12 @@ export function VariableHighlightBadge({
       <span className={`w-1.5 h-1.5 rounded-full ${theme.dotColor} shrink-0 animate-pulse`} />
 
       {/* Rótulo da Tag em modo destaque */}
-      <span className="text-[9px] font-mono opacity-75 font-semibold bg-white/70 dark:bg-black/30 px-1 py-0.2 rounded border border-black/5">
+      <span className="text-[9px] font-mono opacity-75 font-semibold bg-white/70 dark:bg-black/30 px-1 py-0.2 rounded border border-black/5 truncate max-w-[85px] shrink-0">
         {tag.replace(/^\{\{|\}\}$/g, "")}
       </span>
 
       {/* Valor Resolvido */}
-      <span className="tracking-normal">{value}</span>
+      <span className="tracking-normal truncate min-w-0 max-w-[140px]">{value}</span>
     </span>
   );
 

@@ -81,7 +81,7 @@ export function DocumentVariablesPanel({
   };
 
   return (
-    <div className="flex flex-col space-y-3 min-h-[450px]">
+    <div className="flex flex-col space-y-3 flex-1 h-full min-h-[450px]">
       {/* ── STATUS DO BLOCO SELECIONADO / INSTRUÇÕES ── */}
       <div className="shrink-0 space-y-3">
         {selectedBlock ? (
@@ -163,7 +163,7 @@ export function DocumentVariablesPanel({
       </div>
 
       {/* ── LISTA DE VARIÁVEIS COM ROLAGEM DEDICADA ── */}
-      <div className="flex-1 min-h-[220px] max-h-[440px] overflow-y-auto space-y-1.5 pr-1">
+      <div className="flex-1 min-h-[220px] overflow-y-auto space-y-1.5 pr-1">
         {filteredVariables.length === 0 ? (
           <div className="text-center py-8 text-slate-400 text-xs">
             <Variable className="w-8 h-8 mx-auto text-slate-300 mb-2" />

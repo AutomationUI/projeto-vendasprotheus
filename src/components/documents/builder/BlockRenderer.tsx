@@ -9,12 +9,20 @@ import {
   ShieldCheck, 
   FileText, 
   ExternalLink,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  Copy,
+  Printer,
+  Download,
+  XCircle,
+  ArrowDownCircle
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { DocumentBlock, QuoteDocumentData, DocumentLayoutArchetype } from "@/types/document-template";
+import { DocumentBlock, QuoteDocumentData, DocumentLayoutArchetype, ButtonActionConfig } from "@/types/document-template";
 import { AppSettings } from "@/lib/settings-store";
 import { VariableHighlightBadge, renderRichTextWithVariables } from "./VariableHighlightBadge";
+import { executeButtonAction } from "@/lib/button-action-executor";
+import { useToast } from "@/hooks/use-toast";
 
 interface BlockRendererProps {
   block: DocumentBlock;
@@ -39,6 +47,8 @@ export const BlockRenderer = React.memo(function BlockRenderer({
   activeCategoryFilter = null,
   onSelectFieldOrVariable,
 }: BlockRendererProps) {
+  const { toast } = useToast();
+
   if (block.hidden) return null;
 
   const tConfig = settings.templateConfig;
@@ -46,6 +56,27 @@ export const BlockRenderer = React.memo(function BlockRenderer({
   const accentColor = tConfig.accentColor || "#0284c7";
   const headerBg = tConfig.headerBgColor || primaryColor;
   const headerText = tConfig.headerTextColor || "#ffffff";
+
+  const handleExecuteAction = async (e: React.MouseEvent, actionConfig?: ButtonActionConfig) => {
+    e.stopPropagation();
+    if (!actionConfig) return;
+    await executeButtonAction(actionConfig, {
+      quoteData: data,
+      onShowToast: (title, description) => toast({ title, description }),
+      onApproveQuote: () => {
+        toast({
+          title: "Proposta Aprovada com Sucesso!",
+          description: `O orçamento ${data?.numero || ""} foi aceito. Status atualizado.`,
+        });
+      },
+      onRejectQuote: () => {
+        toast({
+          title: "Proposta Recusada",
+          description: "O feedback do cliente foi registrado.",
+        });
+      },
+    });
+  };
 
   const fmtBRL = (val?: number) => {
     if (val === undefined || isNaN(val)) return "R$ 0,00";
@@ -65,8 +96,9 @@ export const BlockRenderer = React.memo(function BlockRenderer({
 
   // Determinar se o bloco está em um container pequeno para ajuste proporcional
   const blockWidth = block.style?.width || "full";
-  const isSmall = ["1/5", "1/4", "1/3"].includes(blockWidth);
-  const isMedium = ["2/5", "1/2", "3/5"].includes(blockWidth);
+  const customPercent = block.style?.customWidthPercent;
+  const isSmall = customPercent !== undefined ? customPercent < 36 : ["1/5", "1/4", "1/3"].includes(blockWidth);
+  const isMedium = customPercent !== undefined ? (customPercent >= 36 && customPercent < 68) : ["2/5", "1/2", "3/5"].includes(blockWidth);
   
   // Ajuste de escala de texto baseado na largura do bloco
   const textScaleClass = isSmall ? "text-[10px]" : isMedium ? "text-[11px]" : "text-xs";
@@ -141,12 +173,190 @@ export const BlockRenderer = React.memo(function BlockRenderer({
     textAlign: block.style?.textAlign,
     fontSize: block.style?.fontSize ? `${block.style.fontSize}px` : undefined,
     fontWeight: block.style?.fontWeight,
-    width: block.style?.width === "1/2" ? "50%" :
-           block.style?.width === "1/3" ? "33.333%" :
-           block.style?.width === "2/3" ? "66.666%" :
-           block.style?.width === "1/4" ? "25%" :
-           block.style?.width === "3/4" ? "75%" : "100%",
+    minHeight: block.style?.minHeight ? `${block.style.minHeight}px` : undefined,
+    height: block.style?.minHeight ? "100%" : undefined,
+    zIndex: block.zIndex,
+    boxSizing: "border-box",
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    flex: "1 1 auto",
   };
+
+  // Se o bloco possui elementos internos configurados ou é custom_block / reusable_block
+  if ((block.elements && block.elements.length > 0) || block.type === "custom_block" || block.type === "reusable_block") {
+    const elements = block.elements || [];
+    return (
+      <div 
+        style={{
+          ...styleObj,
+          position: "relative",
+          minHeight: `${block.style?.minHeight || 120}px`,
+          overflow: "hidden",
+        }} 
+        className="w-full select-none"
+      >
+        {elements.map((el) => {
+          const rawContent = el.content || (el.variableTag ? el.variableTag : "");
+          const interpolated = renderRichTextWithVariables({
+            template: rawContent,
+            variablesMap,
+            blockId: block.id,
+            fieldName: `element-${el.id}`,
+            highlightVariables,
+            selectedVariableTag,
+            activeCategoryFilter,
+            onSelectFieldOrVariable,
+          });
+
+          const isFixedSize = el.type === "shape" || el.type === "qr_code" || el.type === "image";
+          const elStyle: React.CSSProperties = {
+            position: "absolute",
+            left: `${el.x}px`,
+            top: `${el.y}px`,
+            width: `${el.width}px`,
+            height: isFixedSize ? (el.height ? `${el.height}px` : "auto") : "auto",
+            minHeight: el.height ? `${el.height}px` : undefined,
+            zIndex: el.zIndex || 1,
+            boxSizing: "border-box",
+            backgroundColor: el.style?.backgroundColor,
+            color: el.style?.textColor,
+            borderColor: el.style?.borderColor,
+            borderWidth: el.style?.borderWidth ? `${el.style.borderWidth}px` : undefined,
+            borderStyle: el.style?.borderWidth ? "solid" : undefined,
+            borderRadius: el.style?.borderRadius ? `${el.style.borderRadius}px` : undefined,
+            fontSize: el.style?.fontSize ? `${el.style.fontSize}px` : undefined,
+            fontWeight: el.style?.fontWeight,
+            textAlign: el.style?.textAlign,
+            opacity: el.style?.opacity ?? 1,
+            boxShadow: el.style?.boxShadow,
+            padding: el.style?.padding ? `${el.style.padding}px` : undefined,
+            letterSpacing: el.style?.letterSpacing,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: el.type === "badge" || el.type === "button" ? "center" : "flex-start",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          };
+
+          if (el.type === "divider") {
+            return (
+              <div
+                key={el.id}
+                style={{
+                  position: "absolute",
+                  left: `${el.x}px`,
+                  top: `${el.y}px`,
+                  width: `${el.width}px`,
+                  borderTopWidth: `${el.style?.borderWidth || 1}px`,
+                  borderTopColor: el.style?.borderColor || "#cbd5e1",
+                  borderTopStyle: "solid",
+                  zIndex: el.zIndex || 1,
+                }}
+              />
+            );
+          }
+
+          if (el.type === "shape") {
+            return (
+              <div
+                key={el.id}
+                style={elStyle}
+              />
+            );
+          }
+
+          if (el.type === "qr_code") {
+            const qrPayload = interpolated || el.content || (data?.totais?.valorTotal ? `PIX: ${settings.templateConfig?.empresaCnpj || "12345678000190"} - R$ ${data.totais.valorTotal}` : "https://vendasprotheus.com.br");
+            const qrSize = Math.max(24, Math.min(el.width - 8, (el.height || el.width) - 8));
+            return (
+              <div key={el.id} style={elStyle} className="overflow-hidden flex items-center justify-center p-1 bg-white border border-slate-200 rounded shadow-xs">
+                <QRCodeSVG value={String(qrPayload)} size={qrSize} />
+              </div>
+            );
+          }
+
+          if (el.type === "button") {
+            const btnConfig = el.buttonConfig || {
+              actionType: "approve_quote",
+              openInNewTab: true,
+            };
+
+            const getActionIcon = () => {
+              switch (btnConfig.actionType) {
+                case "whatsapp": return <MessageSquare className="w-3.5 h-3.5 mr-1 text-emerald-300" />;
+                case "copy_pix": return <Copy className="w-3.5 h-3.5 mr-1 text-amber-300" />;
+                case "print_pdf": return <Printer className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                case "email_seller": return <Mail className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                case "download_file": return <Download className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                case "reject_quote": return <XCircle className="w-3.5 h-3.5 mr-1 text-red-300" />;
+                case "scroll_to_block": return <ArrowDownCircle className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                case "link": return <ExternalLink className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                default: return <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-300" />;
+              }
+            };
+
+            return (
+              <button
+                key={el.id}
+                type="button"
+                onClick={(e) => handleExecuteAction(e, btnConfig)}
+                style={{
+                  ...elStyle,
+                  cursor: "pointer",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                className="transition-transform active:scale-95 shadow-sm hover:opacity-90"
+              >
+                {getActionIcon()}
+                <span>{interpolated}</span>
+              </button>
+            );
+          }
+
+          if (el.type === "badge") {
+            return (
+              <div key={el.id} style={elStyle} className="font-bold text-center">
+                {interpolated || el.name || "Badge"}
+              </div>
+            );
+          }
+
+          if (el.type === "image") {
+            return (
+              <div key={el.id} style={elStyle} className="overflow-hidden flex items-center justify-center">
+                {el.config?.url ? (
+                  <img 
+                    src={el.config.url} 
+                    alt={el.name || "Imagem"} 
+                    className="w-full h-full object-contain" 
+                    referrerPolicy="no-referrer" 
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 border border-dashed border-slate-300 rounded flex items-center justify-center text-slate-400 text-xs">
+                    Imagem
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <div key={el.id} style={elStyle}>
+              {interpolated}
+            </div>
+          );
+        })}
+        {elements.length === 0 && (
+          <div className="w-full h-full min-h-[100px] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-xs p-4">
+            Bloco vazio. Clique duas vezes ou use o botão "Editar Conteúdo" para adicionar variáveis e componentes livremente.
+          </div>
+        )}
+      </div>
+    );
+  }
 
   switch (block.type) {
     case "header": {
@@ -158,19 +368,22 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       if (isBanner) {
         return (
           <div
-            className={`w-full relative overflow-hidden text-white transition-all duration-300`}
+            className={`w-full h-full relative overflow-hidden text-white transition-all duration-300 flex flex-col justify-center`}
             style={{
               backgroundColor: block.style?.backgroundColor || headerBg,
               color: block.style?.textColor || headerText,
               borderRadius: block.style?.borderRadius ?? 8,
+              minHeight: block.style?.minHeight ? `${block.style.minHeight}px` : undefined,
+              height: block.style?.minHeight ? "100%" : undefined,
               paddingTop: isSmall ? 12 : (block.style?.paddingTop ?? 24),
               paddingBottom: isSmall ? 12 : (block.style?.paddingBottom ?? 24),
               paddingLeft: isSmall ? 16 : (block.style?.paddingLeft ?? 24),
               paddingRight: isSmall ? 16 : (block.style?.paddingRight ?? 24),
               marginBottom: block.style?.marginBottom ?? 20,
+              boxSizing: "border-box",
             }}
           >
-            <div className={`flex ${isSmall ? 'flex-col' : 'flex-col md:flex-row'} justify-between items-start ${isSmall ? '' : 'md:items-center'} ${spacingClass} relative z-10`}>
+            <div className={`flex ${isSmall ? 'flex-col' : 'flex-col md:flex-row'} justify-between items-start ${isSmall ? '' : 'md:items-center'} ${spacingClass} relative z-10 w-full`}>
               <div className={`flex items-center ${spacingClass}`}>
                 {showLogo && tConfig.logoImage ? (
                   <div className={`${isSmall ? 'p-1' : 'p-2'} bg-white rounded-lg shadow-sm shrink-0`}>
@@ -367,8 +580,8 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const showSeller = block.config?.showSeller ?? true;
 
       return (
-        <div style={styleObj} className={`w-full transition-all duration-300`}>
-          <div className={`grid ${isSmall ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} ${spacingClass}`}>
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between transition-all duration-300">
+          <div className={`grid ${isSmall ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} ${spacingClass} flex-1`}>
             {/* Destinatário */}
             <div className="space-y-1.5">
               <span className={`${textScaleClass} font-bold uppercase tracking-wider text-slate-400 block`}>
@@ -571,12 +784,12 @@ export const BlockRenderer = React.memo(function BlockRenderer({
 
     case "products_grid": {
       const showPrices = block.config?.showPrices ?? true;
-      const columns = block.config?.columns ?? (isSmall ? 1 : isMedium ? 2 : 3);
+      const columns = block.config?.columns ?? (isSmall ? 1 : isMedium ? 2 : (customPercent && customPercent >= 85) ? 4 : 3);
       const showImages = block.config?.showImages ?? true;
 
       return (
-        <div style={styleObj} className="w-full transition-all duration-300">
-          <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+        <div style={styleObj} className="w-full h-full flex flex-col transition-all duration-300">
+          <div className="grid gap-3 flex-1 auto-rows-fr" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
             {data.itens.map((item, idx) => (
               <div 
                 key={item.id || idx}
@@ -698,8 +911,9 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       }
 
       return (
-        <div style={styleObj} className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 print:overflow-visible print:w-full">
-          <table className="w-full text-left border-collapse table-auto">
+        <div style={styleObj} className="w-full h-full flex flex-col overflow-hidden max-w-full">
+          <div className="w-full flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 print:overflow-visible print:w-full max-w-full">
+            <table className="w-full text-left border-collapse table-fixed max-w-full">
             <thead>
               <tr style={{ backgroundColor: primaryColor, color: headerText }}>
                 {showPhotos && <th className={`${paddingClass} w-[5%] min-w-[32px] text-center font-semibold`}>Item</th>}
@@ -732,7 +946,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({
                     </td>
                   )}
                   {showSku && (
-                    <td className={`${paddingClass} font-mono font-medium text-slate-700 whitespace-nowrap align-middle`}>
+                    <td className={`${paddingClass} font-mono font-medium text-slate-700 align-middle truncate max-w-[90px]`}>
                       <VariableHighlightBadge
                         tag="{{item.codigo}}"
                         value={item.codigo}
@@ -777,7 +991,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({
                     )}
                   </td>
                   {showNcm && (
-                    <td className={`${paddingClass} font-mono text-slate-600 text-center whitespace-nowrap align-middle`}>
+                    <td className={`${paddingClass} font-mono text-slate-600 text-center align-middle truncate max-w-[80px]`}>
                       <VariableHighlightBadge
                         tag="{{item.codigo}}"
                         value={item.ncm || "-"}
@@ -791,7 +1005,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({
                       />
                     </td>
                   )}
-                  <td className={`${paddingClass} text-center font-bold text-slate-800 whitespace-nowrap align-middle`}>
+                  <td className={`${paddingClass} text-center font-bold text-slate-800 align-middle truncate max-w-[70px]`}>
                     <VariableHighlightBadge
                       tag="{{item.quantidade}}"
                       value={`${item.quantidade}`}
@@ -883,6 +1097,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       );
     }
@@ -895,8 +1110,8 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const highlightTotal = block.config?.highlightTotal ?? true;
 
       return (
-        <div style={styleObj} className={`w-full transition-all duration-300`}>
-          <div className={`flex ${isSmall ? 'flex-col' : 'flex-col md:flex-row'} justify-between items-start ${isSmall ? '' : 'md:items-center'} gap-4`}>
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between transition-all duration-300">
+          <div className={`flex ${isSmall ? 'flex-col' : 'flex-col md:flex-row'} justify-between items-start ${isSmall ? '' : 'md:items-end'} gap-4 flex-1`}>
             <div className={`${textScaleClass} text-slate-500 space-y-1`}>
               <div className="font-semibold text-slate-700">Total de Itens: {data.itens.length} produto(s)</div>
               {showMargin && data.totais.margemLucroPercentual !== undefined && (
@@ -1039,8 +1254,8 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const pixPayload = `00020126330014BR.GOV.BCB.PIX0114${pixKey.replace(/\D/g, "")}520400005303986540${data.totais.valorTotal.toFixed(2)}5802BR5913${pixName.substring(0, 25)}6008SAOPAULO62070503***6304`;
 
       return (
-        <div style={styleObj} className={`w-full transition-all duration-300`}>
-          <div className={`flex ${isSmall ? 'flex-col' : 'flex-col sm:flex-row'} items-center ${spacingClass}`}>
+        <div style={styleObj} className="w-full h-full flex flex-col justify-center transition-all duration-300">
+          <div className={`flex ${isSmall ? 'flex-col' : 'flex-col sm:flex-row'} items-center ${spacingClass} flex-1 justify-center`}>
             <div className={`bg-white ${isSmall ? 'p-1.5' : 'p-2.5'} rounded-lg border border-emerald-200 shadow-2xs shrink-0`}>
               <QRCodeSVG value={pixPayload} size={isSmall ? 64 : 88} level="M" />
             </div>
@@ -1091,12 +1306,19 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const rawText = block.content || block.config?.bankDetailsText || settings.documentConfig.dadosBancarios || "Banco: Itaú (341) | Agência: 0123 | Conta Corrente: 45678-9\nFavorecido: VendasProtheus Automação Comercial S/A";
 
       return (
-        <div style={styleObj} className="w-full">
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between">
           <div className="flex items-center gap-2 mb-1.5 text-slate-800 font-bold text-xs uppercase tracking-wider">
             <CreditCard className="w-4 h-4 text-indigo-600" />
             Dados Bancários para Transferência / TED / DOC
           </div>
-          <div className="text-xs font-mono text-slate-700 whitespace-pre-line leading-relaxed bg-white p-2.5 rounded border border-slate-200">
+          <div 
+            className={`text-xs font-mono whitespace-pre-line leading-relaxed p-2.5 rounded border border-slate-200 flex-1 ${block.style?.backgroundColor ? '' : 'bg-white'} ${block.style?.textColor ? '' : 'text-slate-700'}`}
+            style={{
+              backgroundColor: block.style?.backgroundColor ? "transparent" : undefined,
+              color: block.style?.textColor ? "inherit" : undefined,
+              borderColor: (block.style?.borderWidth || block.style?.borderColor) ? "transparent" : undefined
+            }}
+          >
             {renderRichTextWithVariables({
               template: rawText,
               variablesMap,
@@ -1117,14 +1339,14 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const terms = block.config?.commercialText || "Faturamento mediante aprovação cadastral e disponibilidade em estoque.";
 
       return (
-        <div style={styleObj} className="w-full text-xs space-y-2">
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between text-xs space-y-2">
           <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-indigo-600" />
             Garantia & Condições Gerais
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600">
+          <div className={`grid ${isSmall ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-3 flex-1 ${block.style?.textColor ? '' : 'text-slate-600'}`}>
             <div>
-              <span className="font-semibold text-slate-700 block">Garantia Técnica:</span>
+              <span className={`font-semibold block ${block.style?.textColor ? '' : 'text-slate-700'}`}>Garantia Técnica:</span>
               <span>
                 {renderRichTextWithVariables({
                   template: warranty,
@@ -1139,7 +1361,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({
               </span>
             </div>
             <div>
-              <span className="font-semibold text-slate-700 block">Condições de Fornecimento:</span>
+              <span className={`font-semibold block ${block.style?.textColor ? '' : 'text-slate-700'}`}>Condições de Fornecimento:</span>
               <span>
                 {renderRichTextWithVariables({
                   template: terms,
@@ -1162,12 +1384,19 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const text = block.content || data.observacoes || "Nenhuma observação adicional.";
 
       return (
-        <div style={styleObj} className="w-full text-xs">
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between text-xs">
           <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5 mb-1.5">
             <FileText className="w-4 h-4 text-indigo-600" />
             {block.title || "Observações do Orçamento"}
           </div>
-          <div className="text-slate-600 whitespace-pre-line leading-relaxed bg-white p-3 rounded border border-slate-200">
+          <div 
+            className={`whitespace-pre-line leading-relaxed p-3 rounded border border-slate-200 flex-1 ${block.style?.backgroundColor ? '' : 'bg-white'} ${block.style?.textColor ? '' : 'text-slate-600'}`}
+            style={{
+              backgroundColor: block.style?.backgroundColor ? "transparent" : undefined,
+              color: block.style?.textColor ? "inherit" : undefined,
+              borderColor: (block.style?.borderWidth || block.style?.borderColor) ? "transparent" : undefined
+            }}
+          >
             {renderRichTextWithVariables({
               template: text,
               variablesMap,
@@ -1189,9 +1418,9 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const sellerLabel = block.config?.sellerLabel || "Consultor Técnico Comercial";
 
       return (
-        <div style={styleObj} className="w-full">
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between">
           {termsText && (
-            <div className="text-[11px] text-slate-500 italic mb-6 text-center leading-relaxed">
+            <div className="text-[11px] text-slate-500 italic mb-4 text-center leading-relaxed">
               "
               {renderRichTextWithVariables({
                 template: termsText,
@@ -1207,7 +1436,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+          <div className={`grid ${isSmall ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 gap-8'} pt-4 mt-auto`}>
             <div className="text-center">
               <div className="border-b border-slate-400 w-4/5 mx-auto mb-1.5" />
               <div className="font-bold text-xs text-slate-800">
@@ -1317,22 +1546,28 @@ export const BlockRenderer = React.memo(function BlockRenderer({
 
     case "image": {
       const imageUrl = block.config?.imageUrl || "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80";
-      const height = block.config?.height || 120;
+      const customH = block.style?.minHeight || block.config?.height || 120;
       const objectFit = block.config?.objectFit || "cover";
 
       return (
-        <div style={styleObj} className="w-full overflow-hidden">
+        <div style={styleObj} className="w-full h-full flex flex-col overflow-hidden">
           <img 
             src={imageUrl} 
             alt={block.config?.altText || "Imagem"} 
-            className="w-full rounded"
-            style={{ height: `${height}px`, objectFit }}
+            className="w-full h-full flex-1 rounded object-cover"
+            style={{ minHeight: `${customH}px`, height: "100%", objectFit }}
           />
         </div>
       );
     }
 
     case "button": {
+      const btnConfig = block.buttonConfig || {
+        actionType: block.config?.url ? "link" : "approve_quote",
+        url: block.config?.url,
+        openInNewTab: true,
+      };
+
       const labelNode = renderRichTextWithVariables({
         template: block.content || "Aprovar Proposta",
         variablesMap,
@@ -1344,59 +1579,78 @@ export const BlockRenderer = React.memo(function BlockRenderer({
         onSelectFieldOrVariable,
       });
 
+      const getActionIcon = () => {
+        switch (btnConfig.actionType) {
+          case "whatsapp": return <MessageSquare className="w-4 h-4 text-emerald-300" />;
+          case "copy_pix": return <Copy className="w-4 h-4 text-amber-300" />;
+          case "print_pdf": return <Printer className="w-4 h-4 opacity-80" />;
+          case "email_seller": return <Mail className="w-4 h-4 opacity-80" />;
+          case "download_file": return <Download className="w-4 h-4 opacity-80" />;
+          case "reject_quote": return <XCircle className="w-4 h-4 text-red-300" />;
+          case "scroll_to_block": return <ArrowDownCircle className="w-4 h-4 opacity-80" />;
+          case "link": return <ExternalLink className="w-4 h-4 opacity-80" />;
+          default: return <CheckCircle2 className="w-4 h-4 text-emerald-300" />;
+        }
+      };
+
       return (
-        <div style={styleObj} className="w-full flex justify-center">
-          <div
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg shadow-sm font-semibold transition-transform active:scale-95"
+        <div style={styleObj} className="w-full h-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={(e) => handleExecuteAction(e, btnConfig)}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg shadow-sm font-semibold transition-all hover:opacity-95 hover:shadow active:scale-95 cursor-pointer"
             style={{
               backgroundColor: block.style?.backgroundColor || primaryColor,
               color: block.style?.textColor || "#ffffff",
               fontSize: block.style?.fontSize ? `${block.style.fontSize}px` : "14px",
+              borderWidth: block.style?.borderWidth ? `${block.style.borderWidth}px` : undefined,
+              borderColor: block.style?.borderColor,
             }}
           >
-            <CheckCircle2 className="w-4 h-4" />
+            {getActionIcon()}
             <span>{labelNode}</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </div>
+          </button>
         </div>
       );
     }
 
     case "card": {
       return (
-        <div style={styleObj} className="w-full leading-relaxed">
-          {block.title && (
-            <div className="font-bold mb-1">
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between leading-relaxed">
+          <div className="flex-1">
+            {block.title && (
+              <div className="font-bold mb-1">
+                {renderRichTextWithVariables({
+                  template: block.title,
+                  variablesMap,
+                  blockId: block.id,
+                  fieldName: "title",
+                  highlightVariables,
+                  selectedVariableTag,
+                  activeCategoryFilter,
+                  onSelectFieldOrVariable,
+                })}
+              </div>
+            )}
+            <div className="whitespace-pre-line">
               {renderRichTextWithVariables({
-                template: block.title,
+                template: block.content || "",
                 variablesMap,
                 blockId: block.id,
-                fieldName: "title",
+                fieldName: "content",
                 highlightVariables,
                 selectedVariableTag,
                 activeCategoryFilter,
                 onSelectFieldOrVariable,
               })}
             </div>
-          )}
-          <div className="whitespace-pre-line">
-            {renderRichTextWithVariables({
-              template: block.content || "",
-              variablesMap,
-              blockId: block.id,
-              fieldName: "content",
-              highlightVariables,
-              selectedVariableTag,
-              activeCategoryFilter,
-              onSelectFieldOrVariable,
-            })}
           </div>
         </div>
       );
     }
 
     case "variables_grid": {
-      const columns = block.config?.columns || 2;
+      const columns = block.config?.columns || (isSmall ? 1 : isMedium ? 2 : 4);
       const items: Array<{ id: string; label: string; value: string }> = block.config?.items || [
         { id: "item-1", label: "Cliente / Razão Social", value: "{{cliente.nome}}" },
         { id: "item-2", label: "CNPJ / CPF", value: "{{cliente.cnpjCpf}}" },
@@ -1407,10 +1661,11 @@ export const BlockRenderer = React.memo(function BlockRenderer({
       const gridColsClass = 
         columns === 4 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-4" :
         columns === 3 ? "grid-cols-1 sm:grid-cols-3" :
-        "grid-cols-1 sm:grid-cols-2";
+        columns === 2 ? "grid-cols-1 sm:grid-cols-2" :
+        "grid-cols-1";
 
       return (
-        <div style={styleObj} className="w-full">
+        <div style={styleObj} className="w-full h-full flex flex-col justify-between">
           {block.title && (
             <div className="font-bold text-xs uppercase tracking-wider text-slate-500 mb-2">
               {block.title}
@@ -1548,6 +1803,160 @@ export const BlockRenderer = React.memo(function BlockRenderer({
               </div>
             )}
           </div>
+        </div>
+      );
+    }
+
+    case "custom_block":
+    case "reusable_block": {
+      const elements = block.elements || [];
+      return (
+        <div 
+          style={{
+            ...styleObj,
+            position: "relative",
+            minHeight: `${block.style?.minHeight || 120}px`,
+            overflow: "hidden",
+          }} 
+          className="w-full select-none"
+        >
+          {elements.map((el) => {
+            const rawContent = el.content || (el.variableTag ? el.variableTag : "");
+            const interpolated = renderRichTextWithVariables({
+              template: rawContent,
+              variablesMap,
+              blockId: block.id,
+              fieldName: `element-${el.id}`,
+              highlightVariables,
+              selectedVariableTag,
+              activeCategoryFilter,
+              onSelectFieldOrVariable,
+            });
+
+            const elStyle: React.CSSProperties = {
+              position: "absolute",
+              left: `${el.x}px`,
+              top: `${el.y}px`,
+              width: `${el.width}px`,
+              height: el.height ? `${el.height}px` : "auto",
+              zIndex: el.zIndex || 1,
+              backgroundColor: el.style?.backgroundColor,
+              color: el.style?.textColor,
+              borderColor: el.style?.borderColor,
+              borderWidth: el.style?.borderWidth ? `${el.style.borderWidth}px` : undefined,
+              borderStyle: el.style?.borderWidth ? "solid" : undefined,
+              borderRadius: el.style?.borderRadius ? `${el.style.borderRadius}px` : undefined,
+              fontSize: el.style?.fontSize ? `${el.style.fontSize}px` : undefined,
+              fontWeight: el.style?.fontWeight,
+              textAlign: el.style?.textAlign,
+              opacity: el.style?.opacity ?? 1,
+              boxShadow: el.style?.boxShadow,
+              padding: el.style?.padding ? `${el.style.padding}px` : undefined,
+              letterSpacing: el.style?.letterSpacing,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: el.type === "badge" || el.type === "button" ? "center" : "flex-start",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+            };
+
+            if (el.type === "divider") {
+              return (
+                <div
+                  key={el.id}
+                  style={{
+                    position: "absolute",
+                    left: `${el.x}px`,
+                    top: `${el.y}px`,
+                    width: `${el.width}px`,
+                    borderTopWidth: `${el.style?.borderWidth || 1}px`,
+                    borderTopColor: el.style?.borderColor || "#cbd5e1",
+                    borderTopStyle: "solid",
+                    zIndex: el.zIndex || 1,
+                  }}
+                />
+              );
+            }
+
+            if (el.type === "shape") {
+              return (
+                <div
+                  key={el.id}
+                  style={elStyle}
+                />
+              );
+            }
+
+            if (el.type === "button") {
+              const btnConfig = el.buttonConfig || {
+                actionType: "approve_quote",
+                openInNewTab: true,
+              };
+
+              const getActionIcon = () => {
+                switch (btnConfig.actionType) {
+                  case "whatsapp": return <MessageSquare className="w-3.5 h-3.5 mr-1 text-emerald-300" />;
+                  case "copy_pix": return <Copy className="w-3.5 h-3.5 mr-1 text-amber-300" />;
+                  case "print_pdf": return <Printer className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                  case "email_seller": return <Mail className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                  case "download_file": return <Download className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                  case "reject_quote": return <XCircle className="w-3.5 h-3.5 mr-1 text-red-300" />;
+                  case "scroll_to_block": return <ArrowDownCircle className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                  case "link": return <ExternalLink className="w-3.5 h-3.5 mr-1 opacity-80" />;
+                  default: return <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-300" />;
+                }
+              };
+
+              return (
+                <button
+                  key={el.id}
+                  type="button"
+                  onClick={(e) => handleExecuteAction(e, btnConfig)}
+                  style={{
+                    ...elStyle,
+                    cursor: "pointer",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  className="transition-transform active:scale-95 shadow-sm hover:opacity-90"
+                >
+                  {getActionIcon()}
+                  <span>{interpolated}</span>
+                </button>
+              );
+            }
+
+            if (el.type === "image") {
+              return (
+                <div key={el.id} style={elStyle} className="overflow-hidden flex items-center justify-center">
+                  {el.config?.url ? (
+                    <img 
+                      src={el.config.url} 
+                      alt={el.name || "Imagem"} 
+                      className="w-full h-full object-contain" 
+                      referrerPolicy="no-referrer" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-100 border border-dashed border-slate-300 rounded flex items-center justify-center text-slate-400 text-xs">
+                      Imagem
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <div key={el.id} style={elStyle}>
+                {interpolated}
+              </div>
+            );
+          })}
+          {elements.length === 0 && (
+            <div className="w-full h-full min-h-[100px] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-xs p-4">
+              Bloco vazio. Clique duas vezes ou use o botão "Editar Conteúdo" para adicionar variáveis e componentes livremente.
+            </div>
+          )}
         </div>
       );
     }

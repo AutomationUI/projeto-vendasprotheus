@@ -59,6 +59,12 @@ export const DEFAULT_DOCUMENT_SECTIONS = {
   showDigitalStamp: true,
   termsOfAcceptance: "Ao aprovar esta proposta comercial, o comprador concorda com os termos, prazos e condições financeiras descritas neste instrumento contratual.",
 
+  // Ações Interativas (Portal Web)
+  showInteractiveActions: false,
+  interactiveActionsAlignment: "center" as const,
+  showWhatsappButton: true,
+  showApproveButton: true,
+
   // Rodapé
   showFooter: true,
   footerText: "Proposta gerada eletronicamente pelo Sistema de Gestão Comercial e ERP Protheus. Documento confidencial.",
@@ -197,6 +203,72 @@ export const DOCUMENT_PRESETS: DocumentTemplatePreset[] = [
       showProductSku: true,
       showSignatures: true,
       tableDensity: "comfortable",
+      zebraTable: true,
+    }
+  },
+  {
+    id: "preset-interativo-web",
+    name: "Proposta Web Interativa (B2B)",
+    description: "Modelo otimizado para visualização no navegador. Inclui botões de ação (Aprovar, WhatsApp) flutuantes no final do documento.",
+    archetype: "moderno",
+    fontFamily: "sans",
+    radius: "lg",
+    colors: {
+      primary: "#6366f1", // Indigo 500
+      secondary: "#0f172a", // Slate 900
+      accent: "#4f46e5", // Indigo 600
+      headerBg: "#6366f1",
+      headerText: "#ffffff",
+      highlightBg: "#eef2ff",
+    },
+    sections: {
+      ...DEFAULT_DOCUMENT_SECTIONS,
+      showInteractiveActions: true,
+      interactiveActionsAlignment: "center",
+      showApproveButton: true,
+      showWhatsappButton: true,
+      showHeaderBanner: true,
+      headerAlignment: "between",
+      showProductPhotos: true,
+      tableDensity: "spacious",
+      zebraTable: false,
+    }
+  },
+  {
+    id: "preset-simplificado-b2c",
+    name: "Orçamento Simplificado B2C",
+    description: "Direto ao ponto, ideal para clientes finais (varejo) e orçamentos curtos. Sem fotos, sem tabela densa, sem assinaturas.",
+    archetype: "minimalista",
+    fontFamily: "sans",
+    radius: "md",
+    colors: {
+      primary: "#09090b", // Zinc 950
+      secondary: "#71717a", // Zinc 500
+      accent: "#18181b", // Zinc 900
+      headerBg: "#09090b",
+      headerText: "#ffffff",
+      highlightBg: "#f4f4f5",
+    },
+    sections: {
+      ...DEFAULT_DOCUMENT_SECTIONS,
+      showInteractiveActions: true,
+      interactiveActionsAlignment: "right",
+      showApproveButton: true,
+      showWhatsappButton: false,
+      showHeaderBanner: true,
+      headerAlignment: "left",
+      showProductPhotos: false,
+      showProductSku: false,
+      showProductNcm: false,
+      showItemDiscount: false,
+      showItemTaxes: false,
+      showItemDeliveryTime: false,
+      showItemNotes: false,
+      showGeneralNotes: false,
+      showSignatures: false,
+      showDigitalStamp: false,
+      showCommercialConditions: false,
+      tableDensity: "compact",
       zebraTable: true,
     }
   }

@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Search, Eye, LayoutList, Columns3, Trash2, FileText, Printer, Send, Loader2, Image as ImageIcon, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Search, Eye, LayoutList, Columns3, Trash2, FileText, Printer, Loader2, Image as ImageIcon, AlertTriangle, CheckCircle2, XCircle, Download } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type Order, type OrderStatus, type Product, type Customer, type OrderItem } from "@/lib/mock-data";
 import { ordersService, productsService, customersService } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -28,6 +32,7 @@ import { ProductImageWithSkeleton } from "@/components/products/ProductImageWith
 import { OrderProductsGallery } from "@/components/orders/OrderProductsGallery";
 import { FlowEvaluationBadge } from "@/components/FlowEvaluationBadge";
 import { localDB } from "@/lib/local-db";
+import { DocumentPrintLayout } from "@/components/documents/DocumentPrintLayout";
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -261,6 +266,206 @@ export default function PedidosPage() {
     return matchSearch && matchStatus;
   });
 
+  const exportToExcel = () => {
+    const headers = [
+      "Número do Pedido",
+      "Cliente",
+      "Vendedor",
+      "Data",
+      "Condição de Pagamento",
+      "Status",
+      "Valor Total (R$)"
+    ];
+
+    const rows = filtered.map((o) => [
+      o.numero,
+      o.cliente,
+      o.vendedor,
+      o.data,
+      o.condicaoPagamento,
+      o.status,
+      o.valor
+    ]);
+
+    const aoa = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pedidos de Venda");
+    XLSX.writeFile(wb, `pedidos_venda_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    toast({
+      title: "Sucesso!",
+      description: `Exportados ${filtered.length} pedidos em formato Excel (.xlsx).`,
+    });
+  };
+
+  const exportToCSV = () => {
+    const headers = [
+      "Numero do Pedido",
+      "Cliente",
+      "Vendedor",
+      "Data",
+      "Condicao de Pagamento",
+      "Status",
+      "Valor Total"
+    ];
+
+    const rows = filtered.map((o) => [
+      o.numero,
+      o.cliente,
+      o.vendedor,
+      o.data,
+      o.condicaoPagamento,
+      o.status,
+      o.valor
+    ]);
+
+    const aoa = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const csvContent = XLSX.utils.sheet_to_csv(ws);
+    
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `pedidos_venda_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Sucesso!",
+      description: `Exportados ${filtered.length} pedidos em formato CSV.`,
+    });
+  };
+
+  const exportToPDF = () => {
+    const settings = getSettings();
+    const { templateConfig: tc } = settings;
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 14;
+
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const h = hex.replace("#", "");
+      return [
+        parseInt(h.substring(0, 2), 16) || 15,
+        parseInt(h.substring(2, 4), 16) || 23,
+        parseInt(h.substring(4, 6), 16) || 42,
+      ];
+    };
+    const primary = hexToRgb(tc?.primaryColor || "#0f172a");
+
+    // Header bar
+    doc.setFillColor(...primary);
+    doc.rect(0, 0, pageW, 26, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(tc?.logoText || "SISTEMA ERP PROTHEUS", margin, 10);
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    const companyInfo = [tc?.empresaCnpj, tc?.empresaTelefone, tc?.empresaEmail]
+      .filter(Boolean)
+      .join("  •  ");
+    doc.text(companyInfo, margin, 16);
+    if (tc?.empresaEndereco) {
+      doc.text(tc?.empresaEndereco, margin, 21);
+    }
+
+    // Title & Subtitle
+    const y = 33;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("RELATÓRIO DE PEDIDOS DE VENDA", margin, y);
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Gerado em ${new Date().toLocaleString("pt-BR")}  •  ${filtered.length} pedidos`,
+      pageW - margin,
+      y,
+      { align: "right" }
+    );
+
+    const headers = [
+      "Número",
+      "Cliente",
+      "Vendedor",
+      "Data",
+      "Condição",
+      "Status",
+      "Valor Total"
+    ];
+
+    const rows = filtered.map((o) => [
+      o.numero || "",
+      o.cliente || "",
+      o.vendedor || "",
+      o.data ? new Date(o.data + "T00:00:00").toLocaleDateString("pt-BR") : "",
+      o.condicaoPagamento || "",
+      o.status || "",
+      o.valor ? fmt(o.valor) : "R$ 0,00"
+    ]);
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [headers],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: {
+        fillColor: primary,
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 8.5,
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        6: { halign: "right" },
+      },
+      margin: { left: margin, right: margin, bottom: 20 },
+      didDrawPage: (pageData) => {
+        // Footer on every page
+        const footerY = pageH - 12;
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, footerY - 4, pageW - margin, footerY - 4);
+
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        const footerText = tc?.textoRodape || "";
+        if (footerText) {
+          doc.text(footerText, pageW / 2, footerY, { align: "center", maxWidth: pageW - margin * 2 });
+        }
+
+        doc.setFontSize(6.5);
+        doc.text(
+          `Página ${pageData.pageNumber} • ${tc?.logoText || "VendasProtheus"}`,
+          pageW - margin,
+          pageH - 6,
+          { align: "right" }
+        );
+        doc.text(
+          `Gerado em ${new Date().toLocaleString("pt-BR")}`,
+          margin,
+          pageH - 6
+        );
+      },
+    });
+
+    doc.save(`pedidos_venda_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+    toast({
+      title: "Sucesso!",
+      description: `Exportados ${filtered.length} pedidos em formato PDF.`,
+    });
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <PageHeader
@@ -286,6 +491,49 @@ export default function PedidosPage() {
               </Select>
             </div>
             <div className="flex gap-1.5 items-center">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5 px-3">
+                    <Download className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Exportar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-1.5" align="end">
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={exportToExcel}
+                      className="justify-start text-xs h-8 text-slate-700 dark:text-slate-300 font-normal hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-2 text-emerald-600" />
+                      Excel (.xlsx)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={exportToCSV}
+                      className="justify-start text-xs h-8 text-slate-700 dark:text-slate-300 font-normal hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                      CSV (.csv)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={exportToPDF}
+                      className="justify-start text-xs h-8 text-slate-700 dark:text-slate-300 font-normal hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-2 text-rose-500" />
+                      PDF (.pdf)
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
               <Button
                 variant={showProductImages ? "default" : "outline"}
                 size="sm"
@@ -548,223 +796,17 @@ export default function PedidosPage() {
                 />
               </div>
 
-              {/* Folha A4 que segue fielmente as configurações */}
-              <motion.div 
-                id="printable-order"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className="printable-area bg-white w-full max-w-[210mm] min-h-[297mm] shadow-xl border overflow-hidden flex flex-col"
-              >
-                  {/* Cabeçalho Customizável */}
-                  <div 
-                    className={cn(
-                      "p-10",
-                      settings.templateConfig.layout === "moderno" ? "text-white" : "border-b pb-8"
-                    )}
-                    style={{ 
-                      backgroundColor: settings.templateConfig.layout === "moderno" ? settings.templateConfig.primaryColor : "transparent"
-                    }}
-                  >
-                    <div className={cn(
-                      "flex items-center justify-between",
-                      settings.templateConfig.layout === "minimalista" && "flex-col items-start gap-4"
-                    )}>
-                      {/* Logo */}
-                      <div className="flex items-center gap-5">
-                        {settings.templateConfig.logoImage ? (
-                          <div className={cn("p-2 rounded-lg bg-white shadow-sm", settings.templateConfig.layout === "classico" && "border")}>
-                            <img src={settings.templateConfig.logoImage} alt="Logo" className="max-h-20 max-w-[220px] object-contain" />
-                          </div>
-                        ) : (
-                          <div 
-                            className="w-14 h-14 rounded-xl flex shrink-0 items-center justify-center text-white font-bold shadow-md text-xl"
-                            style={{ backgroundColor: settings.templateConfig.layout === "moderno" ? "rgba(255,255,255,0.2)" : settings.templateConfig.primaryColor }}
-                          >
-                            {settings.templateConfig.logoText.substring(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <h1 className={cn("text-3xl font-black tracking-tighter", settings.templateConfig.layout !== "moderno" && "text-slate-900")}>
-                            {settings.templateConfig.logoImage ? "" : settings.templateConfig.logoText || "Sua Empresa"}
-                          </h1>
-                          <div className={cn("text-xs flex flex-col gap-1 mt-1 font-medium", settings.templateConfig.layout === "moderno" ? "text-white/80" : "text-slate-500")}>
-                            {settings.templateConfig.empresaCnpj && <span>CNPJ: {settings.templateConfig.empresaCnpj}</span>}
-                            {settings.templateConfig.empresaTelefone && <span>Tel: {settings.templateConfig.empresaTelefone}</span>}
-                            {settings.templateConfig.empresaEmail && <span>{settings.templateConfig.empresaEmail}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className={cn("text-right", settings.templateConfig.layout === "minimalista" && "text-left")}>
-                        <p className={cn("text-sm uppercase font-bold tracking-widest opacity-70", settings.templateConfig.layout !== "moderno" && "text-slate-400")}>
-                          Pedido de Venda
-                        </p>
-                        <p className={cn("font-mono font-black text-2xl h-10 flex items-center justify-end", settings.templateConfig.layout !== "moderno" && "text-slate-900")}>
-                          #{selectedOrder.numero}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Corpo do Pedido */}
-                  <div className="p-10 space-y-10 text-slate-800 flex-1 flex flex-col">
-                    <div className="grid grid-cols-2 gap-10">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3" style={{ color: settings.templateConfig.layout === "classico" ? settings.templateConfig.primaryColor : undefined }}>
-                          Dados do Cliente
-                        </h4>
-                        <p className="font-bold text-lg text-slate-900">{selectedOrder.cliente}</p>
-                        <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
-                          Faturamento conforme cadastro no ERP Protheus.<br/>
-                          Vendedor Responsável: {selectedOrder.vendedor}
-                        </p>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex justify-between border-b pb-2.5">
-                          <span className="text-sm text-slate-500">Data de Emissão</span>
-                          <span className="text-sm font-bold text-slate-900">{new Date(selectedOrder.data).toLocaleDateString("pt-BR")}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2.5">
-                          <span className="text-sm text-slate-500">Status do Pedido</span>
-                          <span className="text-sm font-bold text-slate-900">{selectedOrder.status}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2.5">
-                          <span className="text-sm text-slate-500">Cond. de Pagamento</span>
-                          <span className="text-sm font-bold text-slate-900">{selectedOrder.condicaoPagamento || "À vista"}</span>
-                        </div>
-                        {settings.documentConfig.prazoEntregaPadrao && (
-                          <div className="flex justify-between pb-2.5">
-                            <span className="text-sm text-slate-500">Prazo de Entrega</span>
-                            <span className="text-sm font-bold text-slate-900">{settings.documentConfig.prazoEntregaPadrao}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tabela de Produtos */}
-                    <div className="flex-1">
-                      <table className="w-full text-left text-sm border-collapse">
-                        <thead>
-                          <tr className="border-b-2" style={{ borderColor: settings.templateConfig.primaryColor }}>
-                            {showProductImages && <th className="py-4 font-bold text-slate-900 w-12">FOTO</th>}
-                            <th className="py-4 font-bold text-slate-900 w-24">CÓDIGO</th>
-                            <th className="py-4 font-bold text-slate-900">DESCRIÇÃO DO PRODUTO</th>
-                            <th className="py-4 font-bold text-slate-900 text-right w-16">QTD</th>
-                            <th className="py-4 font-bold text-slate-900 text-right w-32">PREÇO UNIT.</th>
-                            {settings.documentConfig.mostrarDescontoItem && (
-                              <th className="py-4 font-bold text-slate-900 text-right w-20">DESC.%</th>
-                            )}
-                            <th className="py-4 font-bold text-slate-900 text-right w-32">TOTAL</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y text-slate-600">
-                          {selectedOrder.itens?.map((item, i) => (
-                            <tr key={i} className="group">
-                              {showProductImages && (
-                                <td className="py-3 pr-2">
-                                  <ProductImageWithSkeleton
-                                    src={getItemProductImage(item.codigo, item.produto)}
-                                    alt={item.produto}
-                                    aspectRatio="thumb"
-                                    containerClassName="w-10 h-10 rounded-md border border-slate-200 overflow-hidden bg-slate-50"
-                                  />
-                                </td>
-                              )}
-                              <td className="py-4 pr-3 font-mono text-xs font-medium">{item.codigo}</td>
-                              <td className="py-4 pr-3">
-                                <p className="font-bold text-slate-800">{item.produto}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5">NCM: 0000.00.00 | IPI: 5%</p>
-                              </td>
-                              <td className="py-4 pr-3 text-right font-medium">{item.quantidade}</td>
-                              <td className="py-4 pr-3 text-right font-medium">{fmt(item.precoUnitario)}</td>
-                              {settings.documentConfig.mostrarDescontoItem && (
-                                <td className="py-4 pr-3 text-right text-slate-400 italic">
-                                  {item.desconto > 0 ? `${item.desconto}%` : "—"}
-                                </td>
-                              )}
-                              <td className="py-4 text-right font-bold text-slate-900">{fmt(item.total)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Rodapé Interno com Totais e Observações */}
-                    <div className="space-y-8 mt-auto">
-                      <div className="flex flex-col md:flex-row gap-10">
-                        {/* Observações conforme config */}
-                        <div className="flex-1">
-                          {settings.documentConfig.mostrarObservacoes && selectedOrder.observacoes && (
-                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-sm">
-                              <p className="font-bold text-slate-900 mb-2 flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-slate-400" /> Observações do Pedido:
-                              </p>
-                              <p className="text-slate-600 leading-relaxed italic">{selectedOrder.observacoes}</p>
-                            </div>
-                          )}
-                          
-                          {settings.documentConfig.mostrarDadosBancarios && settings.documentConfig.dadosBancarios && (
-                            <div className="mt-4 p-5 rounded-xl border border-dashed border-slate-200 bg-emerald-50/20">
-                                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-2">Dados Bancários para Pagamento:</p>
-                                <p className="text-xs text-slate-500 whitespace-pre-wrap">{settings.documentConfig.dadosBancarios}</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Totais */}
-                        <div className="w-full md:w-80 space-y-3">
-                          <div className="flex justify-between text-sm px-2">
-                            <span className="text-slate-500 font-medium">Subtotal dos Itens</span>
-                            <span className="font-bold text-slate-700">{fmt(selectedOrder.valor)}</span>
-                          </div>
-                          {settings.documentConfig.mostrarImpostos && (
-                            <div className="flex justify-between text-sm px-2">
-                              <span className="text-slate-500 font-medium">Total Impostos (IPI/ICMS)</span>
-                              <span className="font-bold text-slate-700">{fmt(selectedOrder.valor * 0.12)}</span>
-                            </div>
-                          )}
-                          <div 
-                            className="flex justify-between p-5 rounded-2xl shadow-sm border" 
-                            style={{ 
-                                backgroundColor: settings.templateConfig.layout === "minimalista" ? "#f8fafc" : `${settings.templateConfig.primaryColor}10`,
-                                borderColor: `${settings.templateConfig.primaryColor}20`
-                            }}
-                          >
-                            <div className="flex flex-col justify-center">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Final</span>
-                            </div>
-                            <span className="font-black tracking-tighter text-3xl" style={{ color: settings.templateConfig.primaryColor }}>
-                              {fmt(selectedOrder.valor)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Assinatura Digital / QR Code Simulado */}
-                      <div className="pt-10 border-t flex items-center justify-between opacity-80">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 bg-slate-100 rounded border flex items-center justify-center">
-                                <Send className="w-6 h-6 text-slate-400" />
-                            </div>
-                            <div className="text-[10px] text-slate-400 max-w-xs uppercase font-medium">
-                                Documento gerado eletronicamente em {new Date().toLocaleString("pt-BR")}.<br/>
-                                Válido mediante assinatura eletrônica vinculada ao pedido no ERP.
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                            <p className="text-[11px] font-black text-slate-900">{settings.templateConfig.logoText}</p>
-                            <p className="text-[10px] text-slate-400">{settings.templateConfig.empresaEmail}</p>
-                        </div>
-                      </div>
-                      
-                      {/* Rodapé fixo conforme config */}
-                      {settings.templateConfig.textoRodape && (
-                        <div className="text-[10px] text-slate-400 text-center leading-relaxed font-medium">
-                          {settings.templateConfig.textoRodape}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-              </motion.div>
+              {/* Layout de Impressão A4 Profissional & Branded */}
+              <div className="w-full max-w-[210mm] flex justify-center">
+                <DocumentPrintLayout
+                  order={selectedOrder}
+                  settings={settings}
+                  products={products}
+                  showProductPhotos={showProductImages}
+                  printableId="printable-order"
+                  showToolbar={true}
+                />
+              </div>
             </div>
           )}
         </DialogContent>

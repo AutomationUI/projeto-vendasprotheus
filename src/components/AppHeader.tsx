@@ -28,6 +28,7 @@ import {
 import { ChevronRight, Settings, LogOut, Search, Sparkles, LayoutDashboard, GitFork, ShieldCheck, ShoppingCart, Factory } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { useUIStore } from "@/store/use-ui-store";
 import { ROLE_LABELS, getRoleLabel } from "@/lib/types-roles";
 import { cn } from "@/lib/utils";
 
@@ -54,9 +55,15 @@ export function AppHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  
+  const {
+    isCommandOpen,
+    isCopilotOpen,
+    showLogoutDialog,
+    setCommandOpen: setIsCommandOpen,
+    setCopilotOpen: setIsCopilotOpen,
+    setLogoutDialogOpen: setShowLogoutDialog,
+  } = useUIStore();
 
   const activeTab = location.pathname.split("/")[1] || "dashboard";
 

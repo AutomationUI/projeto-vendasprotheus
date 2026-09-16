@@ -322,7 +322,7 @@ export default function ConfiguracoesPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 w-full max-w-none">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Configurações do Sistema</h1>
         <p className="text-sm text-muted-foreground">Gerencie usuários, perfis e regras comerciais.</p>
@@ -507,7 +507,7 @@ export default function ConfiguracoesPage() {
         </TabsContent>
 
         {/* Tab Documentos & Marca (Estúdio Avançado de Layouts de Orçamentos) */}
-        <TabsContent value="marca" className="mt-4 space-y-4">
+        <TabsContent value="marca" className="mt-4 space-y-4 w-full max-w-none">
           <DocumentStudioTab />
         </TabsContent>
 

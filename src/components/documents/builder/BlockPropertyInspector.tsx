@@ -22,7 +22,11 @@ import {
   FileText,
   CreditCard,
   ShieldCheck,
-  Building2
+  Building2,
+  PanelRightClose,
+  AlertTriangle,
+  CheckCircle2,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +35,12 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DocumentBlock, DocumentTemplatePreset } from "@/types/document-template";
+import { DocumentBlock, DocumentTemplatePreset, ButtonActionConfig } from "@/types/document-template";
 import { DOCUMENT_VARIABLES } from "@/lib/document-variables";
 import { getActiveDraggedVariableTag } from "@/lib/drag-variable-utils";
 import { AppSettings } from "@/lib/settings-store";
+import { ButtonActionInspector } from "./ButtonActionInspector";
+import { updateBlockNameInLibrary } from "./block-library-store";
 
 interface BlockPropertyInspectorProps {
   selectedBlock: DocumentBlock | null;
@@ -48,6 +54,11 @@ interface BlockPropertyInspectorProps {
   settings: AppSettings;
   highlightedField?: string | null;
   selectedVariableTag?: string | null;
+  onOpenInternalEditor?: (block: DocumentBlock) => void;
+  onSaveToLibrary?: (block: DocumentBlock) => void;
+  onClosePanel?: () => void;
+  isOverflowing?: boolean;
+  onFixBlockOverflow?: (id: string) => void;
 }
 
 // Subcomponente reutilizável para Seleção Rápida de Variáveis
@@ -377,6 +388,11 @@ export function BlockPropertyInspector({
   settings: _settings,
   highlightedField,
   selectedVariableTag,
+  onOpenInternalEditor,
+  onSaveToLibrary,
+  onClosePanel,
+  isOverflowing = false,
+  onFixBlockOverflow,
 }: BlockPropertyInspectorProps) {
   const updateStyle = (key: keyof NonNullable<DocumentBlock["style"]>, value: any) => {
     if (!selectedBlock) return;
@@ -387,6 +403,42 @@ export function BlockPropertyInspector({
         [key]: value,
       }
     });
+  };
+
+  const toValidHex = (colorStr?: string, defaultHex = "#ffffff"): string => {
+    if (!colorStr) return defaultHex;
+    if (colorStr === "transparent") return "#ffffff";
+    if (/^#[0-9a-fA-F]{6}$/.test(colorStr)) return colorStr;
+    if (/^[0-9a-fA-F]{6}$/.test(colorStr)) return `#${colorStr}`;
+    if (/^#[0-9a-fA-F]{3}$/.test(colorStr)) {
+      return "#" + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3];
+    }
+    if (/^[0-9a-fA-F]{3}$/.test(colorStr)) {
+      return "#" + colorStr[0] + colorStr[0] + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2];
+    }
+    return defaultHex;
+  };
+
+  const getDefaultColors = (type: string) => {
+    const primary = preset?.colors?.primary || "#1e293b";
+    const accent = preset?.colors?.accent || "#ea580c";
+    
+    switch (type) {
+      case "header":
+        return { bg: primary, text: "#ffffff" };
+      case "footer":
+        return { bg: "transparent", text: "#94a3b8" };
+      case "button":
+        return { bg: primary, text: "#ffffff" };
+      case "banner":
+        return { bg: primary, text: "#ffffff" };
+      case "pix_payment":
+        return { bg: "#f0fdf4", text: "#15803d" };
+      case "commercial_terms":
+        return { bg: "#f8fafc", text: "#334155" };
+      default:
+        return { bg: "#ffffff", text: "#0f172a" };
+    }
   };
 
   const updateConfig = (key: string, value: any) => {
@@ -403,7 +455,7 @@ export function BlockPropertyInspector({
   // Se nenhum bloco estiver selecionado, exibe propriedades gerais do modelo
   if (!selectedBlock) {
     return (
-      <div className="space-y-6 p-4">
+      <div className="space-y-6 p-4 max-h-[calc(100vh-140px)] flex-1 overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b">
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-indigo-600" />
@@ -411,9 +463,23 @@ export function BlockPropertyInspector({
               Propriedades do Modelo
             </h3>
           </div>
-          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-mono">
-            Global
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-mono">
+              Global
+            </span>
+            {onClosePanel && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
+                onClick={onClosePanel}
+                title="Esconder painel direito"
+              >
+                <PanelRightClose className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-4 text-xs">
@@ -499,7 +565,7 @@ export function BlockPropertyInspector({
               <div className="flex items-center gap-2 p-1.5 border rounded bg-slate-50 dark:bg-slate-800">
                 <input
                   type="color"
-                  value={preset.colors.primary}
+                  value={toValidHex(preset.colors.primary, "#1e293b")}
                   onChange={(e) => onUpdatePreset({
                     colors: { ...preset.colors, primary: e.target.value }
                   })}
@@ -511,7 +577,7 @@ export function BlockPropertyInspector({
               <div className="flex items-center gap-2 p-1.5 border rounded bg-slate-50 dark:bg-slate-800">
                 <input
                   type="color"
-                  value={preset.colors.accent}
+                  value={toValidHex(preset.colors.accent, "#ea580c")}
                   onChange={(e) => onUpdatePreset({
                     colors: { ...preset.colors, accent: e.target.value }
                   })}
@@ -535,7 +601,29 @@ export function BlockPropertyInspector({
 
   // Bloco Selecionado
   return (
-    <div className="space-y-5 p-4 max-h-[820px] overflow-y-auto">
+    <div className="space-y-5 p-4 max-h-[calc(100vh-140px)] flex-1 overflow-y-auto">
+      {/* CARD DE ALERTA DE TRANSBORDO / TAMANHO FORA DO A4 */}
+      {isOverflowing && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 rounded-lg text-amber-900 dark:text-amber-200 text-xs space-y-2 animate-in fade-in zoom-in-95 duration-150 shadow-xs">
+          <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
+            <span>Alerta de Tamanho do Documento</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-300/90">
+            Este componente excede a largura útil da folha A4. Ele pode ser cortado na geração do PDF ou na impressão.
+          </p>
+          {onFixBlockOverflow && (
+            <Button
+              type="button"
+              size="sm"
+              className="w-full h-7 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold gap-1.5 shadow-xs"
+              onClick={() => onFixBlockOverflow(selectedBlock.id)}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" /> Ajustar para Largura A4 (100%)
+            </Button>
+          )}
+        </div>
+      )}
       {/* Cabeçalho do Bloco com Ações Rápidas */}
       <div className="flex items-center justify-between pb-3 border-b">
         <div className="overflow-hidden">
@@ -584,6 +672,88 @@ export function BlockPropertyInspector({
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
+          {onClosePanel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 ml-0.5"
+              onClick={onClosePanel}
+              title="Esconder painel direito"
+            >
+              <PanelRightClose className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ── IDENTIFICAÇÃO DO BLOCO ── */}
+      <div className="space-y-1.5 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+        <div className="flex items-center justify-between">
+          <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+            Nome / Título do Bloco
+          </Label>
+          {selectedBlock.isReusable && (
+            <span className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-800">
+              Sincronizado na Biblioteca
+            </span>
+          )}
+        </div>
+        <Input
+          type="text"
+          value={selectedBlock.title || ""}
+          onChange={(e) => {
+            const newTitle = e.target.value;
+            onUpdateBlock({ ...selectedBlock, title: newTitle });
+            if (selectedBlock.libraryBlockId || selectedBlock.isReusable) {
+              updateBlockNameInLibrary(selectedBlock.libraryBlockId || selectedBlock.id, newTitle);
+            }
+          }}
+          placeholder="Ex: Título da Proposta, Condições de Pagamento..."
+          className="h-8 text-xs font-semibold bg-white dark:bg-slate-950"
+        />
+        <p className="text-[10px] text-slate-500">
+          Alterações no nome refletem no documento e na biblioteca de componentes.
+        </p>
+      </div>
+
+      {/* ── PAINEL DE COMPOSIÇÃO E EDIÇÃO INTERNA ── */}
+      <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 font-semibold text-xs text-indigo-900 dark:text-indigo-200">
+            <Layers className="w-4 h-4 text-indigo-600" />
+            <span>Composição & Elementos Internos</span>
+          </div>
+          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+            {selectedBlock.elements?.length || 0} {selectedBlock.elements?.length === 1 ? "Elemento" : "Elementos"}
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-600 dark:text-slate-400">
+          Personalize elementos internos deste bloco (variáveis, títulos, formas, imagens) com posicionamento livre X/Y e camadas.
+        </p>
+        <div className="flex gap-2 pt-1">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => onOpenInternalEditor && onOpenInternalEditor(selectedBlock)}
+            className="flex-1 text-xs h-8 bg-indigo-600 hover:bg-indigo-500 text-white font-medium gap-1.5 shadow-sm"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Editar Conteúdo Interno
+          </Button>
+          {onSaveToLibrary && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onSaveToLibrary(selectedBlock)}
+              className="text-xs h-8 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/50"
+              title="Salvar este bloco como modelo reutilizável na biblioteca"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Salvar na Biblioteca
+            </Button>
+          )}
         </div>
       </div>
 
@@ -949,17 +1119,25 @@ export function BlockPropertyInspector({
         </div>
       )}
 
-      {/* Botão */}
+      {/* Botão & Ações Interativas */}
       {selectedBlock.type === "button" && (
-        <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-xs">
-          <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Configuração do Botão</Label>
-          <InputWithVariablePicker
-            label="Link / URL de Destino"
-            value={selectedBlock.config?.url || ""}
-            onChange={(val) => updateConfig("url", val)}
-            placeholder="https://... ou {{orcamento.linkAprovacao}}"
-          />
-        </div>
+        <ButtonActionInspector
+          buttonConfig={selectedBlock.buttonConfig || {
+            actionType: selectedBlock.config?.url ? "link" : "approve_quote",
+            url: selectedBlock.config?.url,
+            openInNewTab: true,
+          }}
+          onChange={(newButtonConfig) => {
+            onUpdateBlock({
+              ...selectedBlock,
+              buttonConfig: newButtonConfig,
+              config: {
+                ...selectedBlock.config,
+                url: newButtonConfig.url,
+              }
+            });
+          }}
+        />
       )}
 
       {/* Espaçador */}
@@ -1107,48 +1285,111 @@ export function BlockPropertyInspector({
         </h4>
 
         {/* Cores */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="space-y-1">
-            <Label className="text-[11px]">Cor de Fundo</Label>
-            <div className="flex gap-1.5 items-center">
-              <input
-                type="color"
-                value={selectedBlock.style?.backgroundColor || "#ffffff"}
-                onChange={(e) => updateStyle("backgroundColor", e.target.value)}
-                className="w-7 h-7 rounded cursor-pointer p-0 border"
-              />
-              <Input
-                value={selectedBlock.style?.backgroundColor || ""}
-                onChange={(e) => updateStyle("backgroundColor", e.target.value)}
-                placeholder="Ex: #f8fafc"
-                className="h-7 text-[11px] font-mono"
-              />
-            </div>
-          </div>
+        {(() => {
+          const defaults = getDefaultColors(selectedBlock.type);
+          return (
+            <div className="space-y-2 text-xs">
+              {/* Cor de Fundo */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Cor de Fundo</Label>
+                  {selectedBlock.style?.backgroundColor && (
+                    <button
+                      type="button"
+                      onClick={() => updateStyle("backgroundColor", undefined)}
+                      className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                      title="Remover cor de fundo (deixar transparente/herdar)"
+                    >
+                      <X className="w-2.5 h-2.5" /> Limpar
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-1.5 items-center">
+                  <input
+                    type="color"
+                    value={toValidHex(selectedBlock.style?.backgroundColor || defaults.bg)}
+                    onChange={(e) => updateStyle("backgroundColor", e.target.value)}
+                    className="w-7 h-7 rounded cursor-pointer p-0 border border-slate-200 dark:border-slate-800"
+                  />
+                  <Input
+                    value={selectedBlock.style?.backgroundColor || ""}
+                    onChange={(e) => updateStyle("backgroundColor", e.target.value)}
+                    placeholder={defaults.bg === "transparent" ? "Transparente" : `Padrão (${defaults.bg})`}
+                    className="h-7 text-[11px] font-mono"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-1">
-            <Label className="text-[11px]">Cor do Texto</Label>
-            <div className="flex gap-1.5 items-center">
-              <input
-                type="color"
-                value={selectedBlock.style?.textColor || "#0f172a"}
-                onChange={(e) => updateStyle("textColor", e.target.value)}
-                className="w-7 h-7 rounded cursor-pointer p-0 border"
-              />
-              <Input
-                value={selectedBlock.style?.textColor || ""}
-                onChange={(e) => updateStyle("textColor", e.target.value)}
-                placeholder="Ex: #0f172a"
-                className="h-7 text-[11px] font-mono"
-              />
+              {/* Cor do Texto e Cor da Borda */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Cor do Texto</Label>
+                    {selectedBlock.style?.textColor && (
+                      <button
+                        type="button"
+                        onClick={() => updateStyle("textColor", undefined)}
+                        className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                        title="Remover cor do texto (herdar)"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5 items-center">
+                    <input
+                      type="color"
+                      value={toValidHex(selectedBlock.style?.textColor || defaults.text, "#000000")}
+                      onChange={(e) => updateStyle("textColor", e.target.value)}
+                      className="w-7 h-7 rounded cursor-pointer p-0 border border-slate-200 dark:border-slate-800"
+                    />
+                    <Input
+                      value={selectedBlock.style?.textColor || ""}
+                      onChange={(e) => updateStyle("textColor", e.target.value)}
+                      placeholder={`Herdar (${defaults.text})`}
+                      className="h-7 text-[11px] font-mono p-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Cor da Borda</Label>
+                    {selectedBlock.style?.borderColor && (
+                      <button
+                        type="button"
+                        onClick={() => updateStyle("borderColor", undefined)}
+                        className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5"
+                        title="Remover cor da borda"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5 items-center">
+                    <input
+                      type="color"
+                      value={toValidHex(selectedBlock.style?.borderColor || "#cbd5e1", "#cbd5e1")}
+                      onChange={(e) => updateStyle("borderColor", e.target.value)}
+                      className="w-7 h-7 rounded cursor-pointer p-0 border border-slate-200 dark:border-slate-800"
+                    />
+                    <Input
+                      value={selectedBlock.style?.borderColor || ""}
+                      onChange={(e) => updateStyle("borderColor", e.target.value)}
+                      placeholder="Herdar (#cbd5e1)"
+                      className="h-7 text-[11px] font-mono p-1"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Bordas e Cantos */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="space-y-1">
-            <Label className="text-[11px]">Borda (px)</Label>
+            <Label className="text-[11px] text-slate-600 dark:text-slate-400">Borda (Espessura)</Label>
             <Select
               value={String(selectedBlock.style?.borderWidth ?? 0)}
               onValueChange={(v) => updateStyle("borderWidth", Number(v))}
@@ -1160,13 +1401,14 @@ export function BlockPropertyInspector({
                 <SelectItem value="0">Sem Borda</SelectItem>
                 <SelectItem value="1">1px</SelectItem>
                 <SelectItem value="2">2px</SelectItem>
+                <SelectItem value="3">3px</SelectItem>
                 <SelectItem value="4">4px</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px]">Cantos (px)</Label>
+            <Label className="text-[11px] text-slate-600 dark:text-slate-400">Cantos (Arredondamento)</Label>
             <Select
               value={String(selectedBlock.style?.borderRadius ?? 0)}
               onValueChange={(v) => updateStyle("borderRadius", Number(v))}
@@ -1179,12 +1421,35 @@ export function BlockPropertyInspector({
                 <SelectItem value="4">4px (Suave)</SelectItem>
                 <SelectItem value="8">8px (Médio)</SelectItem>
                 <SelectItem value="12">12px (Arredondado)</SelectItem>
+                <SelectItem value="16">16px (Pill)</SelectItem>
+                <SelectItem value="24">24px (Super Pill)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Estilo da Borda e Largura */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="space-y-1">
+            <Label className="text-[11px] text-slate-600 dark:text-slate-400">Estilo da Borda</Label>
+            <Select
+              value={selectedBlock.style?.borderStyle || "solid"}
+              onValueChange={(v) => updateStyle("borderStyle", v)}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="solid">Sólido</SelectItem>
+                <SelectItem value="dashed">Tracejado (Dashed)</SelectItem>
+                <SelectItem value="dotted">Pontilhado (Dotted)</SelectItem>
+                <SelectItem value="double">Duplo (Double)</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px]">Largura</Label>
+            <Label className="text-[11px] text-slate-600 dark:text-slate-400">Largura do Bloco</Label>
             <Select
               value={selectedBlock.style?.width || "full"}
               onValueChange={(v) => updateStyle("width", v)}
@@ -1193,12 +1458,12 @@ export function BlockPropertyInspector({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="full">100%</SelectItem>
+                <SelectItem value="full">100% (Largura Total)</SelectItem>
                 <SelectItem value="4/5">80%</SelectItem>
                 <SelectItem value="3/4">75%</SelectItem>
                 <SelectItem value="2/3">66%</SelectItem>
                 <SelectItem value="3/5">60%</SelectItem>
-                <SelectItem value="1/2">50%</SelectItem>
+                <SelectItem value="1/2">50% (Meia Folha)</SelectItem>
                 <SelectItem value="2/5">40%</SelectItem>
                 <SelectItem value="1/3">33%</SelectItem>
                 <SelectItem value="1/4">25%</SelectItem>
@@ -1208,10 +1473,107 @@ export function BlockPropertyInspector({
           </div>
         </div>
 
-        {/* Espaçamento (Padding e Margin) */}
+        {/* Tipografia: Tamanho e Peso da Fonte */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="space-y-1">
-            <Label className="text-[11px]">Padding Interno (px)</Label>
+            <Label className="text-[11px] text-slate-600 dark:text-slate-400">Tam. Fonte (px)</Label>
+            <Input
+              type="number"
+              value={selectedBlock.style?.fontSize || ""}
+              onChange={(e) => {
+                const val = e.target.value ? Number(e.target.value) : undefined;
+                updateStyle("fontSize", val);
+              }}
+              placeholder="Herdar"
+              className="h-7 text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[11px] text-slate-600 dark:text-slate-400">Peso Fonte</Label>
+            <Select
+              value={selectedBlock.style?.fontWeight || "normal"}
+              onValueChange={(v) => updateStyle("fontWeight", v)}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="medium">Médio (Medium)</SelectItem>
+                <SelectItem value="semibold">Seminegrito (Semibold)</SelectItem>
+                <SelectItem value="bold">Negrito (Bold)</SelectItem>
+                <SelectItem value="light">Fino (Light)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Altura Mínima do Bloco */}
+        <div className="space-y-1 text-xs">
+          <Label className="text-[11px] text-slate-600 dark:text-slate-400">Altura Mínima do Bloco (px)</Label>
+          <Input
+            type="number"
+            value={selectedBlock.style?.minHeight || ""}
+            onChange={(e) => {
+              const val = e.target.value ? Number(e.target.value) : undefined;
+              updateStyle("minHeight", val);
+            }}
+            placeholder="Auto"
+            className="h-7 text-xs"
+          />
+        </div>
+
+        {/* Camada / Z-Index e Ordem de Sobreposição */}
+        <div className="space-y-1.5 text-xs p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+              Camada (Z-Index / Sobreposição)
+            </Label>
+            <span className="text-[10px] text-slate-400">
+              Maior valor = fica na frente
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2"
+              onClick={() => {
+                const currentZ = selectedBlock.zIndex || 1;
+                onUpdateBlock({ ...selectedBlock, zIndex: Math.max(1, currentZ - 1) });
+              }}
+              title="Diminuir camada"
+            >
+              <ArrowDown className="w-3.5 h-3.5 mr-1" /> Trás
+            </Button>
+            <Input
+              type="number"
+              value={selectedBlock.zIndex || 1}
+              onChange={(e) => onUpdateBlock({ ...selectedBlock, zIndex: parseInt(e.target.value) || 1 })}
+              className="h-7 w-16 text-center font-mono text-xs"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2"
+              onClick={() => {
+                const currentZ = selectedBlock.zIndex || 1;
+                onUpdateBlock({ ...selectedBlock, zIndex: currentZ + 1 });
+              }}
+              title="Aumentar camada"
+            >
+              <ArrowUp className="w-3.5 h-3.5 mr-1" /> Frente
+            </Button>
+          </div>
+        </div>
+
+        {/* Espaçamento (Padding e Margens Superior / Inferior com suporte a negativo para sobreposição) */}
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="space-y-1">
+            <Label className="text-[11px]">Padding (px)</Label>
             <Input
               type="number"
               value={selectedBlock.style?.paddingTop ?? 0}
@@ -1233,7 +1595,19 @@ export function BlockPropertyInspector({
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px]">Margem Inferior (px)</Label>
+            <Label className="text-[11px]">Margem Sup. (px)</Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={selectedBlock.style?.marginTop ?? 0}
+              onChange={(e) => updateStyle("marginTop", Number(e.target.value))}
+              className="h-7 text-xs"
+              title="Permite valores negativos para sobrepor o bloco anterior"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[11px]">Margem Inf. (px)</Label>
             <Input
               type="number"
               value={selectedBlock.style?.marginBottom ?? 16}

@@ -10,6 +10,7 @@ import { PrivateRoute } from "@/components/PrivateRoute";
 import { MainLayout } from "@/components/MainLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageLoadingFallback } from "@/components/PageLoadingFallback";
+import { SyncStatusBar } from "@/components/SyncStatusBar";
 
 // Safe serialization tracer for debugging 'Cannot convert object to primitive value'
 function safeInspect(obj: any, label: string) {
@@ -146,6 +147,7 @@ const App = () => {
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <SyncStatusBar />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoadingFallback />}>

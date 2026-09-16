@@ -72,6 +72,109 @@ export function generateBlockHtml(
     return rawVariables ? text : interpolateDocumentVariables(text, data);
   };
 
+  // Se o bloco possui elementos internos compostos (custom_block / editado pelo editor interno)
+  if ((block.elements && block.elements.length > 0) || block.type === "custom_block" || block.type === "reusable_block") {
+    const elements = block.elements || [];
+    const minH = block.style?.minHeight || 120;
+    
+    const elementsHtml = elements.map(el => {
+      const elCssStyle: string[] = [
+        `position: absolute;`,
+        `left: ${el.x}px;`,
+        `top: ${el.y}px;`,
+        `width: ${el.width}px;`,
+        el.height ? `height: ${el.height}px;` : `height: auto;`,
+        `z-index: ${el.zIndex || 1};`,
+        el.style?.backgroundColor ? `background-color: ${el.style.backgroundColor};` : "",
+        el.style?.textColor ? `color: ${el.style.textColor};` : "",
+        el.style?.borderColor ? `border-color: ${el.style.borderColor};` : "",
+        el.style?.borderWidth ? `border-width: ${el.style.borderWidth}px; border-style: solid;` : "",
+        el.style?.borderRadius !== undefined ? `border-radius: ${el.style.borderRadius}px;` : "",
+        el.style?.fontSize ? `font-size: ${el.style.fontSize}px;` : "",
+        el.style?.fontWeight ? `font-weight: ${el.style.fontWeight};` : "",
+        el.style?.textAlign ? `text-align: ${el.style.textAlign};` : "",
+        el.style?.opacity !== undefined ? `opacity: ${el.style.opacity};` : "",
+        el.style?.padding ? `padding: ${el.style.padding}px;` : "",
+        el.style?.boxShadow ? `box-shadow: ${el.style.boxShadow};` : "",
+        el.style?.letterSpacing ? `letter-spacing: ${el.style.letterSpacing};` : "",
+        `box-sizing: border-box;`,
+      ].filter(Boolean).join(" ");
+
+      const rawContent = el.content || (el.variableTag ? el.variableTag : "");
+      const interpolated = resolveText(rawContent);
+
+      if (el.type === "divider") {
+        return `        <div class="doc-el-divider" style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; border-top: ${el.style?.borderWidth || 1}px solid ${el.style?.borderColor || "#cbd5e1"}; z-index: ${el.zIndex || 1};"></div>`;
+      }
+
+      if (el.type === "shape") {
+        return `        <div class="doc-el-shape" style="${elCssStyle}"></div>`;
+      }
+
+      if (el.type === "qr_code") {
+        return `        <div class="doc-el-qrcode" style="${elCssStyle} display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;">
+          <svg viewBox="0 0 24 24" width="${Math.max(24, Math.min(el.width - 12, (el.height || el.width) - 12))}" height="${Math.max(24, Math.min(el.width - 12, (el.height || el.width) - 12))}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #0f172a;">
+            <rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/>
+          </svg>
+        </div>`;
+      }
+
+      if (el.type === "image") {
+        return `        <div class="doc-el-image" style="${elCssStyle} overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          ${el.config?.url 
+            ? `<img src="${el.config.url}" alt="${el.name || "Imagem"}" style="width: 100%; height: 100%; object-fit: contain;" />` 
+            : `<div style="width: 100%; height: 100%; background-color: #f1f5f9; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8;">Imagem</div>`
+          }
+        </div>`;
+      }
+
+      if (el.type === "button") {
+        const btnConfig = el.buttonConfig;
+        let href = "#";
+        const target = btnConfig?.openInNewTab ? "_blank" : "_self";
+        let onClickAttr = "";
+
+        if (btnConfig?.actionType === "whatsapp") {
+          const rawPhone = btnConfig.phone || data.vendedor?.telefone || "";
+          const cleanPhone = rawPhone.replace(/\D/g, "");
+          const phoneWithCountry = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+          const msg = encodeURIComponent(btnConfig.customMessage || `Olá, gostaria de falar sobre o orçamento #${data.numero}`);
+          href = `https://wa.me/${phoneWithCountry}?text=${msg}`;
+        } else if (btnConfig?.actionType === "link" && btnConfig.url) {
+          href = btnConfig.url;
+        } else if (btnConfig?.actionType === "print_pdf" || btnConfig?.actionType === "download_file") {
+          onClickAttr = `onclick="window.print(); return false;"`;
+        }
+
+        return `        <a href="${href}" target="${target}" ${onClickAttr} class="doc-el-button" style="${elCssStyle} display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: bold; cursor: pointer; text-align: center;">
+          <span>${interpolated || el.name || "Botão"}</span>
+        </a>`;
+      }
+
+      if (el.type === "badge") {
+        return `        <div class="doc-el-badge" style="${elCssStyle} display: flex; align-items: center; justify-content: center; font-weight: bold; text-align: center;">
+          <span>${interpolated || el.name || "Badge"}</span>
+        </div>`;
+      }
+
+      if (el.type === "heading") {
+        return `        <h3 class="doc-el-heading" style="${elCssStyle} margin: 0; line-height: 1.3;">
+          ${interpolated || el.name || "Título"}
+        </h3>`;
+      }
+
+      return `        <div class="doc-el-text" style="${elCssStyle} white-space: pre-wrap; word-break: break-word; line-height: 1.4;">
+          ${interpolated}
+        </div>`;
+    }).join("\n");
+
+    return `
+      <!-- Bloco Composto: ${block.title || "Bloco Personalizado"} -->
+      <section class="doc-composed-block" style="position: relative; width: 100%; min-height: ${minH}px; overflow: hidden; margin-bottom: 12px; ${cssStyle}">
+${elementsHtml}
+      </section>`;
+  }
+
   switch (block.type) {
     case "header": {
       const showLogo = block.config?.showLogo ?? true;
@@ -363,6 +466,19 @@ export function generateBlockHtml(
       <div class="doc-card" style="background-color: ${block.style?.backgroundColor || "#f8fafc"}; border: 1px solid ${block.style?.borderColor || "#e2e8f0"}; border-radius: ${block.style?.borderRadius || 8}px; padding: 14px 18px; margin-bottom: 14px; ${cssStyle}">
         ${block.title ? `<h4 style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700; color: ${primaryColor};">${block.title}</h4>` : ""}
         <div style="font-size: 12px; color: #334155; line-height: 1.5;">${cardContent}</div>
+      </div>`;
+    }
+
+    case "button": {
+      const btnText = resolveText(block.content || block.title || "Aprovar Proposta");
+      const btnBg = block.style?.backgroundColor || primaryColor;
+      const btnColor = block.style?.textColor || "#ffffff";
+      return `
+      <!-- Bloco: Botão de Ação -->
+      <div class="doc-block-button" style="text-align: ${block.style?.textAlign || "center"}; margin: 16px 0; ${cssStyle}">
+        <a href="#" onclick="window.print(); return false;" style="display: inline-block; background-color: ${btnBg}; color: ${btnColor}; padding: 10px 24px; border-radius: ${block.style?.borderRadius || 8}px; font-weight: bold; font-size: ${block.style?.fontSize || 14}px; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          ${btnText}
+        </a>
       </div>`;
     }
 

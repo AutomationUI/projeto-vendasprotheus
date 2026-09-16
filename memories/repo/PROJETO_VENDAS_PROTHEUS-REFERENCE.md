@@ -1,9 +1,19 @@
 # Memória do Repositório - Projeto Vendas Protheus
-Última atualização: 2026-09-13 (sessão de correção de rotas HashRouter → BrowserRouter, validação E2E e build)
+Última atualização: 2026-09-16 (sessão de estabilização do Document Builder e flag isComposed)
 
 ## Histórico de Mudanças Recentes
 
-### 2026-09-13 — Correção de Rotas e Validação E2E
+### 2026-09-16 — Document Builder: Persistência de Blocos Compostos (`isComposed`)
+- **Schema & Tipagem (`src/types/document-template.ts`):**
+  - Adicionada a propriedade `isComposed?: boolean` na interface `DocumentBlock` para identificação unívoca de blocos convertidos ou compostos.
+- **Ciclo de Vida de Blocos Compostos (`src/components/documents/builder/`):**
+  - **`block-library-store.ts`**: `createComposedBlockFromExistingBlock` e `saveBlockToLibrary` passam a marcar explicitamente `isComposed: true`.
+  - **`VisualDocumentBuilder.tsx`**: Ajustada a verificação ao abrir o editor interno e ao salvar blocos da biblioteca para `target.elements === undefined && !target.isComposed`, prevenindo a reinicialização acidental para o layout padrão quando o usuário esvazia ou reordena elementos.
+  - **`BlockInternalEditorModal.tsx`**: `deepCloneBlock` e `handleApplyToDocument` propagam a flag `isComposed: true` ao aplicar as edições no documento e na biblioteca.
+- **Validação de Build e Lint:**
+  - Build de produção via `compile_applet` e linting sem nenhum erro sintático ou de execução.
+
+### 2026-09-15 — Document Builder, Governança de IA & Integração de Variáveis
 - **Router Atualizado (`src/App.tsx`):**
   - Substituído `HashRouter` por `BrowserRouter` (import e componente)
   - URLs agora limpas: `http://localhost:4173/dashboard` ao invés de `http://localhost:4173/dashboard#/dashboard`
@@ -110,3 +120,13 @@
 - **Variáveis de Ambiente (`.env`):** Credenciais de Supabase (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) e Stripe configuradas localmente. O template `.env.example` contém apenas placeholders para conformidade com segurança.
 - **Porta do Servidor de Desenvolvimento:** Express rodando na porta `3000`.
 - **Comandos de Teste Local:** `npx vitest run` para suíte unitária; `npx playwright test` para E2E.
+
+### 2026-09-16 — Service Worker Avançado & Document Builder (Templates B2B/B2C e Impressão A4)
+- **Service Worker (`public/sw.js`):**
+  - Refatoração para suportar **Stale-While-Revalidate (SWR)** nas chamadas de API, mantendo a interface instantânea e atualizando os dados em segundo plano.
+  - Implementação de limites rigorosos de cache e autolimpeza para assets legados e dados estáticos (Network-First / Cache-First).
+  - Adicionada mensageria bidirecional via `postMessage` integrada ao componente `SyncStatusBar` (`App.tsx`) para feedback visual em tempo real de operações em background.
+- **Document Builder & Engine de Impressão:**
+  - Inclusão dos **Presets de Mercado (Templates):** "Proposta Web Interativa (B2B)" e "Orçamento Simplificado B2C".
+  - **Injeção de Blocos Interativos Nativa:** Implementação de suporte ao CTA Web (Aprovação e WhatsApp) injetado diretamente como `custom_block` durante a geração de layout dos templates.
+  - **Folha de Estilo A4 Landscape:** Otimização para impressão da página Orçamentos via `orcamentos-print.css` (esconde elementos não-essenciais da interface via `.print-hide`, força proporção `@page { size: A4 landscape; }`).

@@ -649,6 +649,67 @@ export function createDefaultBlocksFromPreset(preset: DocumentTemplatePreset): D
       }
     }] : []),
 
+    // 10.5 Ações Interativas (Portal Web CTA)
+    ...(sections.showInteractiveActions ? [{
+      id: "block-interactive-actions",
+      type: "custom_block" as const,
+      title: "Painel de Ações Interativas (Web)",
+      isComposed: true,
+      style: {
+        backgroundColor: "transparent",
+        paddingTop: 24,
+        paddingBottom: 24,
+        marginBottom: 16,
+        textAlign: sections.interactiveActionsAlignment || "center",
+      },
+      elements: [
+        ...(sections.showApproveButton ? [{
+          id: `cta-approve-${Date.now()}`,
+          type: "button" as const,
+          content: "Aprovar Proposta Comercial",
+          x: 0,
+          y: 0,
+          width: 260,
+          height: 48,
+          zIndex: 1,
+          config: {
+            buttonAction: { actionType: "approve_quote" as const }
+          },
+          style: {
+            backgroundColor: primaryColor,
+            textColor: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "600",
+            borderRadius: 6,
+          }
+        }] : []),
+        ...(sections.showWhatsappButton ? [{
+          id: `cta-whatsapp-${Date.now()}`,
+          type: "button" as const,
+          content: "Falar no WhatsApp",
+          x: sections.showApproveButton ? 280 : 0,
+          y: 0,
+          width: 220,
+          height: 48,
+          zIndex: 2,
+          config: {
+            buttonAction: { 
+              actionType: "whatsapp" as const,
+              phone: "{{vendedor.telefone}}",
+              whatsappMessage: "Olá {{vendedor.nome}}, estou visualizando a proposta {{orcamento.numero}} e gostaria de tirar uma dúvida."
+            }
+          },
+          style: {
+            backgroundColor: "#25D366",
+            textColor: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "600",
+            borderRadius: 6,
+          }
+        }] : []),
+      ]
+    }] : []),
+
     // 11. Rodapé
     {
       id: "block-footer-main",

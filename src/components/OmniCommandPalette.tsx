@@ -31,17 +31,23 @@ import {
 } from "@/components/ui/dialog";
 import { customers, products, recentOrders, quotes } from "@/lib/mock-data";
 import { toast } from "sonner";
+import { useUIStore } from "@/store/use-ui-store";
 
 interface OmniCommandPaletteProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onOpenCopilot?: () => void;
 }
 
-export function OmniCommandPalette({ open, onOpenChange, onOpenCopilot }: OmniCommandPaletteProps) {
+export function OmniCommandPalette({ open: propOpen, onOpenChange: propOnOpenChange, onOpenCopilot }: OmniCommandPaletteProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const { isCommandOpen, setCommandOpen, setCopilotOpen } = useUIStore();
+
+  const open = propOpen !== undefined ? propOpen : isCommandOpen;
+  const onOpenChange = propOnOpenChange !== undefined ? propOnOpenChange : setCommandOpen;
 
   // Global shortcut handler
   useEffect(() => {
@@ -123,7 +129,11 @@ export function OmniCommandPalette({ open, onOpenChange, onOpenCopilot }: OmniCo
       category: "Inteligência Comercial",
       action: () => {
         onOpenChange(false);
-        if (onOpenCopilot) onOpenCopilot();
+        if (onOpenCopilot) {
+          onOpenCopilot();
+        } else {
+          setCopilotOpen(true);
+        }
       },
     },
   ];
