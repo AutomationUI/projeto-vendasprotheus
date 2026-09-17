@@ -131,6 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_temp_images_org_user ON public.product_temp_image
 -- 3.3. TABELA DE IMAGENS DEFINITIVAS DE PRODUTOS (STAGE 2)
 CREATE TABLE IF NOT EXISTS public.product_images (
     id TEXT PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     product_id TEXT NOT NULL REFERENCES public.produtos(id) ON DELETE CASCADE,
     bucket_id TEXT NOT NULL DEFAULT 'product-images',
     storage_path TEXT NOT NULL,
@@ -145,6 +146,9 @@ CREATE TABLE IF NOT EXISTS public.product_images (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Índices otimizados: organization_id PRIMEIRA coluna
+CREATE INDEX IF NOT EXISTS idx_product_images_org ON public.product_images (organization_id);
 
 -- 4. TABELA DE PEDIDOS DE VENDA (ORDERS) COM organization_id OBRIGATÓRIO
 CREATE TABLE IF NOT EXISTS public.pedidos (
@@ -390,80 +394,161 @@ ALTER TABLE public.product_upload_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_temp_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_images ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
-BEGIN
-    -- Clientes
-    DROP POLICY IF EXISTS "Public access clientes" ON public.clientes;
-    CREATE POLICY "Public access clientes" ON public.clientes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+-- Políticas RLS individuais para tabelas base
+DROP POLICY IF EXISTS "Public access clientes" ON public.clientes;
+CREATE POLICY "Public access clientes" ON public.clientes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Produtos
-    DROP POLICY IF EXISTS "Public access produtos" ON public.produtos;
-    CREATE POLICY "Public access produtos" ON public.produtos FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access produtos" ON public.produtos;
+CREATE POLICY "Public access produtos" ON public.produtos FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Product Upload Sessions
-    DROP POLICY IF EXISTS "Public access product_upload_sessions" ON public.product_upload_sessions;
-    CREATE POLICY "Product upload sessions tenant isolation" ON public.product_upload_sessions FOR ALL TO authenticated USING (
-      organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
-    ) WITH CHECK (
-      organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
-    );
+DROP POLICY IF EXISTS "Public access product_upload_sessions" ON public.product_upload_sessions;
+CREATE POLICY "Product upload sessions tenant isolation" ON public.product_upload_sessions FOR ALL TO authenticated USING (
+  organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
+) WITH CHECK (
+  organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
+);
 
-    -- Product Temp Images
-    DROP POLICY IF EXISTS "Public access product_temp_images" ON public.product_temp_images;
-    CREATE POLICY "Product temp images tenant isolation" ON public.product_temp_images FOR ALL TO authenticated USING (
-      organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
-    ) WITH CHECK (
-      organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
-    );
+DROP POLICY IF EXISTS "Public access product_temp_images" ON public.product_temp_images;
+CREATE POLICY "Product temp images tenant isolation" ON public.product_temp_images FOR ALL TO authenticated USING (
+  organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
+) WITH CHECK (
+  organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
+);
 
-    -- Product Images (Definitivas)
-    DROP POLICY IF EXISTS "Public access product_images" ON public.product_images;
-    CREATE POLICY "Product images tenant isolation" ON public.product_images FOR ALL TO authenticated USING (
-      organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
-    ) WITH CHECK (
-      organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
-    );
+DROP POLICY IF EXISTS "Public access product_images" ON public.product_images;
+CREATE POLICY "Product images tenant isolation" ON public.product_images FOR ALL TO authenticated USING (
+  organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
+) WITH CHECK (
+  organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid())
+);
 
-    -- Pedidos
-    DROP POLICY IF EXISTS "Public access pedidos" ON public.pedidos;
-    CREATE POLICY "Public access pedidos" ON public.pedidos FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access pedidos" ON public.pedidos;
+CREATE POLICY "Public access pedidos" ON public.pedidos FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Orçamentos
-    DROP POLICY IF EXISTS "Public access orcamentos" ON public.orcamentos;
-    CREATE POLICY "Public access orcamentos" ON public.orcamentos FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access orcamentos" ON public.orcamentos;
+CREATE POLICY "Public access orcamentos" ON public.orcamentos FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Aprovações
-    DROP POLICY IF EXISTS "Public access aprovacoes" ON public.aprovacoes;
-    CREATE POLICY "Public access aprovacoes" ON public.aprovacoes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access aprovacoes" ON public.aprovacoes;
+CREATE POLICY "Public access aprovacoes" ON public.aprovacoes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- CRM Oportunidades
-    DROP POLICY IF EXISTS "Public access oportunidades_crm" ON public.oportunidades_crm;
-    CREATE POLICY "Public access oportunidades_crm" ON public.oportunidades_crm FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access oportunidades_crm" ON public.oportunidades_crm;
+CREATE POLICY "Public access oportunidades_crm" ON public.oportunidades_crm FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Produção Lotes
-    DROP POLICY IF EXISTS "Public access producao_lotes" ON public.producao_lotes;
-    CREATE POLICY "Public access producao_lotes" ON public.producao_lotes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access producao_lotes" ON public.producao_lotes;
+CREATE POLICY "Public access producao_lotes" ON public.producao_lotes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Usuários
-    DROP POLICY IF EXISTS "Public access usuarios" ON public.usuarios;
-    CREATE POLICY "Public access usuarios" ON public.usuarios FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access usuarios" ON public.usuarios;
+CREATE POLICY "Public access usuarios" ON public.usuarios FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Perfis
-    DROP POLICY IF EXISTS "Public access perfis_customizados" ON public.perfis_customizados;
-    CREATE POLICY "Public access perfis_customizados" ON public.perfis_customizados FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access perfis_customizados" ON public.perfis_customizados;
+CREATE POLICY "Public access perfis_customizados" ON public.perfis_customizados FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Auditoria
-    DROP POLICY IF EXISTS "Public access auditoria" ON public.auditoria;
-    CREATE POLICY "Public access auditoria" ON public.auditoria FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access auditoria" ON public.auditoria;
+CREATE POLICY "Public access auditoria" ON public.auditoria FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Configurações
-    DROP POLICY IF EXISTS "Public access configuracoes" ON public.configuracoes;
-    CREATE POLICY "Public access configuracoes" ON public.configuracoes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+DROP POLICY IF EXISTS "Public access configuracoes" ON public.configuracoes;
+CREATE POLICY "Public access configuracoes" ON public.configuracoes FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
 
-    -- Delivery Logs
-    DROP POLICY IF EXISTS "Public access delivery_logs" ON public.delivery_logs;
-    CREATE POLICY "Public access delivery_logs" ON public.delivery_logs FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
--- 14. TABELA DE FATURAS (INVOICES) COM organization_id OBRIGATÓRIO
+DROP POLICY IF EXISTS "Public access delivery_logs" ON public.delivery_logs;
+CREATE POLICY "Public access delivery_logs" ON public.delivery_logs FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+-- 14. TABELA DE THREADS DE ATENDIMENTO OMNICHANNEL (WhatsApp, Email, Webchat)
+-- Persistência real para webhooks entrantes + histórico de mensagens + SLA
+CREATE TABLE IF NOT EXISTS public.omnichannel_threads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES public.clientes(id) ON DELETE SET NULL,
+    customer_identifier TEXT NOT NULL, -- phone number, email, or webchat session ID
+    source TEXT NOT NULL CHECK (source IN ('whatsapp', 'email', 'webchat')),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'on_hold', 'closed')),
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    started_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    last_message_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    closed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_omnichannel_threads_org_status ON public.omnichannel_threads (organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_omnichannel_threads_org_customer ON public.omnichannel_threads (organization_id, customer_identifier);
+CREATE INDEX IF NOT EXISTS idx_omnichannel_threads_last_msg ON public.omnichannel_threads (last_message_at DESC);
+
+-- 15. TABELA DE MENSAGENS DAS THREADS
+CREATE TABLE IF NOT EXISTS public.omnichannel_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    thread_id UUID NOT NULL REFERENCES public.omnichannel_threads(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('customer', 'agent', 'system')),
+    content TEXT NOT NULL,
+    message_type TEXT NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'document', 'audio', 'video', 'location', 'system')),
+    external_message_id TEXT, -- ID do provedor (WhatsApp message ID, email Message-ID, etc.)
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_omnichannel_messages_thread ON public.omnichannel_messages (thread_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_omnichannel_messages_external ON public.omnichannel_messages (external_message_id);
+
+-- 16. TABELA DE NOTAS INTERNAS (INTERNAL NOTES) NAS THREADS
+CREATE TABLE IF NOT EXISTS public.omnichannel_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    thread_id UUID NOT NULL REFERENCES public.omnichannel_threads(id) ON DELETE CASCADE,
+    author_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_omnichannel_notes_thread ON public.omnichannel_notes (thread_id, created_at);
+
+-- 17. TABELA DE RASTREAMENTO SLA POR THREAD
+CREATE TABLE IF NOT EXISTS public.omnichannel_sla (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    thread_id UUID NOT NULL REFERENCES public.omnichannel_threads(id) ON DELETE CASCADE,
+    priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    source TEXT NOT NULL CHECK (source IN ('whatsapp', 'email', 'webchat')),
+    started_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    last_update_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    timeout_ms BIGINT NOT NULL,
+    alerted BOOLEAN DEFAULT false NOT NULL,
+    exceeded_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(thread_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_omnichannel_sla_org_alerted ON public.omnichannel_sla (organization_id, alerted);
+CREATE INDEX IF NOT EXISTS idx_omnichannel_sla_exceeded ON public.omnichannel_sla (exceeded_at) WHERE exceeded_at IS NOT NULL;
+
+-- RLS para tabelas omnichannel
+ALTER TABLE public.omnichannel_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.omnichannel_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.omnichannel_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.omnichannel_sla ENABLE ROW LEVEL SECURITY;
+
+-- Políticas RLS individuais para cada tabela omnichannel
+DROP POLICY IF EXISTS "governance_omnichannel_threads" ON public.omnichannel_threads;
+CREATE POLICY "governance_omnichannel_threads" ON public.omnichannel_threads FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_omnichannel_messages" ON public.omnichannel_messages;
+CREATE POLICY "governance_omnichannel_messages" ON public.omnichannel_messages FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_omnichannel_notes" ON public.omnichannel_notes;
+CREATE POLICY "governance_omnichannel_notes" ON public.omnichannel_notes FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_omnichannel_sla" ON public.omnichannel_sla;
+CREATE POLICY "governance_omnichannel_sla" ON public.omnichannel_sla FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+-- 18. TABELA DE FATURAS (INVOICES) COM organization_id OBRIGATÓRIO
 CREATE TABLE IF NOT EXISTS public.faturas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -473,8 +558,8 @@ CREATE TABLE IF NOT EXISTS public.faturas (
     data_emissao TIMESTAMPTZ DEFAULT now() NOT NULL,
     data_vencimento TIMESTAMPTZ NOT NULL,
     valor_total NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    valor_pago NUMERIC(15, 2) DEFAULT 0.00 DEFAULT 0.00,
-    status STATUS_FATURA NOT NULL DEFAULT 'ABERTA' CHECK (status IN ('ABERTA', 'PAGA', 'VENCIDA', 'CANCELADA', 'PARCIAL')),
+    valor_pago NUMERIC(15, 2) DEFAULT 0.00,
+    status TEXT NOT NULL DEFAULT 'ABERTA' CHECK (status IN ('ABERTA', 'PAGA', 'VENCIDA', 'CANCELADA', 'PARCIAL')),
     condicao_pagamento TEXT,
     observacoes TEXT,
     metodo_pagamento TEXT,
@@ -497,7 +582,7 @@ CREATE TABLE IF NOT EXISTS public.fatura_parcelas (
     valor_parcela NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     data_vencimento TIMESTAMPTZ NOT NULL,
     data_pagamento TIMESTAMPTZ,
-    status_status PARCELA_STATUS NOT NULL DEFAULT 'PENDENTE' CHECK (status_status IN ('PENDENTE', 'PAGA', 'VENCIDA', 'DESCONTADA', 'IMPAGA')),
+    status_status TEXT NOT NULL DEFAULT 'PENDENTE' CHECK (status_status IN ('PENDENTE', 'PAGA', 'VENCIDA', 'DESCONTADA', 'IMPAGA')),
     juros NUMERIC(15, 2) DEFAULT 0.00,
     multa NUMERIC(15, 2) DEFAULT 0.00,
     desconto NUMERIC(15, 2) DEFAULT 0.00,
@@ -510,18 +595,6 @@ CREATE TABLE IF NOT EXISTS public.fatura_parcelas (
 CREATE INDEX IF NOT EXISTS idx_fatura_parcelas_org_fat ON public.fatura_parcelas (organization_id, fatura_id);
 CREATE INDEX IF NOT EXISTS idx_fatura_parcelas_num_parcela ON public.fatura_parcelas (numero_parcela);
 CREATE INDEX IF NOT EXISTS idx_fatura_parcelas_status ON public.fatura_parcelas (status_status);
-
--- Tipo enumerado para status da fatura
-DO $$
-BEGIN
-    CREATE TYPE STATUS_FATURA AS ENUM ('ABERTA', 'PAGA', 'VENCIDA', 'CANCELADA', 'PARCIAL');
-END $$;
-
--- Tipo enumerado para status da parcela
-DO $$
-BEGIN
-    CREATE TYPE PARCELA_STATUS AS ENUM ('PENDENTE', 'PAGA', 'VENCIDA', 'DESCONTADA', 'IMPAGA');
-END $$;
 
 -- ==============================================================================
 -- CARGA INICIAL DE DADOS (SEEDS)
@@ -797,12 +870,53 @@ ALTER TABLE public.governance_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.commercial_campaigns ENABLE ROW LEVEL SECURITY;
 
-DO $$
-DECLARE t TEXT;
-BEGIN
-  FOREACH t IN ARRAY ARRAY['representative_scopes','representative_portfolios','representative_product_access','commercial_rules','commission_policies','commission_calculations','commission_events','governance_documents','goals','commercial_campaigns']
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'governance_' || t, t);
-    EXECUTE format('CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) ) WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )', 'governance_' || t, t);
-  END LOOP;
-END $$;
+-- Políticas RLS individuais para cada tabela de governança
+DROP POLICY IF EXISTS "governance_representative_scopes" ON public.representative_scopes;
+CREATE POLICY "governance_representative_scopes" ON public.representative_scopes FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_representative_portfolios" ON public.representative_portfolios;
+CREATE POLICY "governance_representative_portfolios" ON public.representative_portfolios FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_representative_product_access" ON public.representative_product_access;
+CREATE POLICY "governance_representative_product_access" ON public.representative_product_access FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_commercial_rules" ON public.commercial_rules;
+CREATE POLICY "governance_commercial_rules" ON public.commercial_rules FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_commission_policies" ON public.commission_policies;
+CREATE POLICY "governance_commission_policies" ON public.commission_policies FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_commission_calculations" ON public.commission_calculations;
+CREATE POLICY "governance_commission_calculations" ON public.commission_calculations FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_commission_events" ON public.commission_events;
+CREATE POLICY "governance_commission_events" ON public.commission_events FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_governance_documents" ON public.governance_documents;
+CREATE POLICY "governance_governance_documents" ON public.governance_documents FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_goals" ON public.goals;
+CREATE POLICY "governance_goals" ON public.goals FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );
+
+DROP POLICY IF EXISTS "governance_commercial_campaigns" ON public.commercial_campaigns;
+CREATE POLICY "governance_commercial_campaigns" ON public.commercial_campaigns FOR ALL TO authenticated
+USING ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) )
+WITH CHECK ( organization_id = (SELECT organization_id FROM public.organization_members WHERE profile_id = auth.uid()) );

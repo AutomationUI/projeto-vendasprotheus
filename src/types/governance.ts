@@ -280,3 +280,77 @@ export interface GovernanceDocument {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Omnichannel (Webhooks & Realtime Sync) ────────────────────────────────
+export type OmnichannelSource = "whatsapp" | "email" | "webchat";
+
+export interface OmnichannelThread {
+  id: string;
+  organizationId: string;
+  customerId?: string;
+  customerIdentifier: string; // phone, email, or session ID
+  source: OmnichannelSource;
+  status: "open" | "in_progress" | "on_hold" | "closed";
+  priority: "low" | "medium" | "high" | "urgent";
+  assignedTo?: string;
+  startedAt: string;
+  lastMessageAt: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OmnichannelMessage {
+  id: string;
+  organizationId: string;
+  threadId: string;
+  role: "customer" | "agent" | "system";
+  content: string;
+  messageType: "text" | "image" | "document" | "audio" | "video" | "location" | "system";
+  externalMessageId?: string;
+  metadata: Record<string, any>;
+  createdAt: string;
+}
+
+export interface OmnichannelNote {
+  id: string;
+  organizationId: string;
+  threadId: string;
+  authorId: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface OmnichannelSLA {
+  id: string;
+  organizationId: string;
+  threadId: string;
+  priority: "low" | "medium" | "high" | "urgent";
+  source: OmnichannelSource;
+  startedAt: string;
+  lastUpdateAt: string;
+  timeoutMs: number;
+  alerted: boolean;
+  exceededAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Event types for Unified Event Hub (websocket_full)
+export type OmnichannelEventName =
+  | "omnichannel.thread.created"
+  | "omnichannel.thread.updated"
+  | "omnichannel.thread.closed"
+  | "omnichannel.message.received"
+  | "omnichannel.message.sent"
+  | "omnichannel.note.added"
+  | "omnichannel.sla.exceeded"
+  | "omnichannel.sla.alerted";
+
+export interface OmnichannelEventPayload {
+  eventName: OmnichannelEventName;
+  organizationId: string;
+  threadId: string;
+  payload: Record<string, any>;
+  timestamp: string;
+}

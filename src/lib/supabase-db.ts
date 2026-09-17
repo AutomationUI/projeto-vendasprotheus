@@ -17,6 +17,10 @@ import type {
   Goal,
   CommercialCampaign,
   DecisionFlow,
+  OmnichannelThread,
+  OmnichannelMessage,
+  OmnichannelNote,
+  OmnichannelSLA,
 } from "../types/governance";
 
 // Map Database Row (snake_case) to Customer (camelCase)
@@ -639,6 +643,126 @@ export function mapFlowToDB(f: DecisionFlow): Record<string, any> {
     version: f.version,
     status: f.status,
     superseded_by: f.supersededBy,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// ─── Omnichannel Mapping Functions ────────────────────────────────────────
+
+export function mapThreadFromDB(row: Record<string, any>): OmnichannelThread {
+  return {
+    id: row.id || "",
+    organizationId: row.organization_id || "",
+    customerId: row.customer_id,
+    customerIdentifier: row.customer_identifier || "",
+    source: row.source || "webchat",
+    status: row.status || "open",
+    priority: row.priority || "medium",
+    assignedTo: row.assigned_to,
+    startedAt: row.started_at || "",
+    lastMessageAt: row.last_message_at || "",
+    closedAt: row.closed_at,
+    createdAt: row.created_at || "",
+    updatedAt: row.updated_at || "",
+  };
+}
+
+export function mapThreadToDB(t: OmnichannelThread): Record<string, any> {
+  return {
+    id: t.id,
+    organization_id: t.organizationId,
+    customer_id: t.customerId,
+    customer_identifier: t.customerIdentifier,
+    source: t.source,
+    status: t.status,
+    priority: t.priority,
+    assigned_to: t.assignedTo,
+    started_at: t.startedAt,
+    last_message_at: t.lastMessageAt,
+    closed_at: t.closedAt,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function mapMessageFromDB(row: Record<string, any>): OmnichannelMessage {
+  return {
+    id: row.id || "",
+    organizationId: row.organization_id || "",
+    threadId: row.thread_id || "",
+    role: row.role || "customer",
+    content: row.content || "",
+    messageType: row.message_type || "text",
+    externalMessageId: row.external_message_id,
+    metadata: row.metadata || {},
+    createdAt: row.created_at || "",
+  };
+}
+
+export function mapMessageToDB(m: OmnichannelMessage): Record<string, any> {
+  return {
+    id: m.id,
+    organization_id: m.organizationId,
+    thread_id: m.threadId,
+    role: m.role,
+    content: m.content,
+    message_type: m.messageType,
+    external_message_id: m.externalMessageId,
+    metadata: m.metadata,
+    created_at: m.createdAt,
+  };
+}
+
+export function mapNoteFromDB(row: Record<string, any>): OmnichannelNote {
+  return {
+    id: row.id || "",
+    organizationId: row.organization_id || "",
+    threadId: row.thread_id || "",
+    authorId: row.author_id || "",
+    text: row.text || "",
+    createdAt: row.created_at || "",
+  };
+}
+
+export function mapNoteToDB(n: OmnichannelNote): Record<string, any> {
+  return {
+    id: n.id,
+    organization_id: n.organizationId,
+    thread_id: n.threadId,
+    author_id: n.authorId,
+    text: n.text,
+    created_at: n.createdAt,
+  };
+}
+
+export function mapSLAFromDB(row: Record<string, any>): OmnichannelSLA {
+  return {
+    id: row.id || "",
+    organizationId: row.organization_id || "",
+    threadId: row.thread_id || "",
+    priority: row.priority || "medium",
+    source: row.source || "webchat",
+    startedAt: row.started_at || "",
+    lastUpdateAt: row.last_update_at || "",
+    timeoutMs: Number(row.timeout_ms || 0),
+    alerted: row.alerted ?? false,
+    exceededAt: row.exceeded_at,
+    createdAt: row.created_at || "",
+    updatedAt: row.updated_at || "",
+  };
+}
+
+export function mapSLAToDB(s: OmnichannelSLA): Record<string, any> {
+  return {
+    id: s.id,
+    organization_id: s.organizationId,
+    thread_id: s.threadId,
+    priority: s.priority,
+    source: s.source,
+    started_at: s.startedAt,
+    last_update_at: s.lastUpdateAt,
+    timeout_ms: s.timeoutMs,
+    alerted: s.alerted,
+    exceeded_at: s.exceededAt,
     updated_at: new Date().toISOString(),
   };
 }
@@ -1383,5 +1507,178 @@ export const supabaseDb = {
       success: hasAnySuccess,
       details: results,
     };
+  },
+
+  // ── Omnichannel: Threads ──
+  async getThreads(
+    organizationId?: string,
+    options?: {
+      status?: OmnichannelThread["status"];
+      source?: OmnichannelThread["source"];
+      customerIdentifier?: string;
+      assignedTo?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<OmnichannelThread[] | null> {
+    try {
+      let query = supabase.from("omnichannel_threads").select("*").order("last_message_at", { ascending: false });
+      if (organizationId) query = query.eq("organization_id", organizationId);
+      if (options?.status) query = query.eq("status", options.status);
+      if (options?.source) query = query.eq("source", options.source);
+      if (options?.customerIdentifier) query = query.eq("customer_identifier", options.customerIdentifier);
+      if (options?.assignedTo) query = query.eq("assigned_to", options.assignedTo);
+      if (options?.limit) query = query.limit(options.limit);
+      if (options?.offset) query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(mapThreadFromDB);
+    } catch (err) {
+      console.warn("[Supabase] Falha ao carregar threads:", err);
+      return null;
+    }
+  },
+
+  async getThread(threadId: string, organizationId?: string): Promise<OmnichannelThread | null> {
+    try {
+      let query = supabase.from("omnichannel_threads").select("*").eq("id", threadId);
+      if (organizationId) query = query.eq("organization_id", organizationId);
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      return data ? mapThreadFromDB(data) : null;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao carregar thread:", err);
+      return null;
+    }
+  },
+
+  async upsertThread(t: OmnichannelThread): Promise<boolean> {
+    try {
+      const payload = mapThreadToDB(t);
+      const { error } = await supabase.from("omnichannel_threads").upsert(payload, { onConflict: "id" });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao salvar thread:", err);
+      return false;
+    }
+  },
+
+  async deleteThread(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.from("omnichannel_threads").delete().eq("id", id);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao excluir thread:", err);
+      return false;
+    }
+  },
+
+  // ── Omnichannel: Messages ──
+  async getThreadMessages(threadId: string, organizationId?: string, limit = 100): Promise<OmnichannelMessage[] | null> {
+    try {
+      let query = supabase
+        .from("omnichannel_messages")
+        .select("*")
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: true })
+        .limit(limit);
+      if (organizationId) query = query.eq("organization_id", organizationId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(mapMessageFromDB);
+    } catch (err) {
+      console.warn("[Supabase] Falha ao carregar mensagens:", err);
+      return null;
+    }
+  },
+
+  async upsertMessage(m: OmnichannelMessage): Promise<boolean> {
+    try {
+      const payload = mapMessageToDB(m);
+      const { error } = await supabase.from("omnichannel_messages").upsert(payload, { onConflict: "id" });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao salvar mensagem:", err);
+      return false;
+    }
+  },
+
+  // ── Omnichannel: Notes ──
+  async getThreadNotes(threadId: string, organizationId?: string): Promise<OmnichannelNote[] | null> {
+    try {
+      let query = supabase
+        .from("omnichannel_notes")
+        .select("*")
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: true });
+      if (organizationId) query = query.eq("organization_id", organizationId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(mapNoteFromDB);
+    } catch (err) {
+      console.warn("[Supabase] Falha ao carregar notas:", err);
+      return null;
+    }
+  },
+
+  async upsertNote(n: OmnichannelNote): Promise<boolean> {
+    try {
+      const payload = mapNoteToDB(n);
+      const { error } = await supabase.from("omnichannel_notes").upsert(payload, { onConflict: "id" });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao salvar nota:", err);
+      return false;
+    }
+  },
+
+  // ── Omnichannel: SLA ──
+  async getSLA(threadId: string, organizationId?: string): Promise<OmnichannelSLA | null> {
+    try {
+      let query = supabase.from("omnichannel_sla").select("*").eq("thread_id", threadId);
+      if (organizationId) query = query.eq("organization_id", organizationId);
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      return data ? mapSLAFromDB(data) : null;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao carregar SLA:", err);
+      return null;
+    }
+  },
+
+  async upsertSLA(s: OmnichannelSLA): Promise<boolean> {
+    try {
+      const payload = mapSLAToDB(s);
+      const { error } = await supabase.from("omnichannel_sla").upsert(payload, { onConflict: "id" });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.warn("[Supabase] Falha ao salvar SLA:", err);
+      return false;
+    }
+  },
+
+  async getSLAAlerts(organizationId: string): Promise<OmnichannelSLA[] | null> {
+    try {
+      const { data, error } = await supabase
+        .from("omnichannel_sla")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .eq("alerted", true)
+        .not("exceeded_at", "is", null)
+        .order("exceeded_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map(mapSLAFromDB);
+    } catch (err) {
+      console.warn("[Supabase] Falha ao carregar alertas SLA:", err);
+      return null;
+    }
   },
 };
