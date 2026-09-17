@@ -2,27 +2,28 @@
 Última atualização: 2026-09-16
 
 ## Estado Atual
-O projeto está em fase avançada de desenvolvimento, com foco na consolidação das melhorias de UX, estabilidade dos blocos no Document Builder (`isComposed`), suporte offline via Service Worker (SWR) e encerramento seguro da sessão atual.
+O projeto está em fase avançada de desenvolvimento. Recentemente, a base foi estabilizada através de correções em metadados de PWA e validação rigorosa de integridade de código.
 
 ### Atividades Recentes (Sessão Atual)
-- **Validação Completa de Build, Linter e Tipos**:
-  - `tsc --noEmit` executado com **0 erros**.
-  - `npm run build` gerou com sucesso o cliente e o servidor (`dist/server.cjs`).
-  - `npm test` validou com sucesso a suíte unitária.
-- **Encerramento da Sessão**:
-  - Revisão completa do estado do repositório.
-  - Atualização estruturada das memórias locais e de repositório conforme diretrizes do projeto (`AI-START.md`, `CLAUDE.md`).
+- **Correção de Metadados PWA**:
+  - Atualizado `public/manifest.json` para utilizar `placeholder.svg` como fallback, resolvendo erro de console "Download error or resource isn't a valid image" relacionado a ícones ausentes.
+- **Validação de Integridade**:
+  - `npx tsc --noEmit`: **0 erros**.
+  - `npm run build`: Sucesso (frontend e backend).
+  - `npm test`: **100% de aprovação** nas suítes core (auth, routes, produtos).
+- **Resolução de Conflitos de Porta**:
+  - Identificado e resolvido erro `EADDRINUSE` na porta 3000 e 24678 através da finalização forçada de processos zumbis do Node/Vite.
 
 ## Problemas Conhecidos / Pendências
-- **Exportação nativa via UI AI Studio**: O popup de exportação do AI Studio pode apresentar "Internal error" quando o repositório já existe no GitHub ou aguarda autorização OAuth na organização AutomationUI. O envio direto via Git CLI contorna essa limitação com êxito.
+- **Atraso na Liberação de Portas**: O sistema operacional por vezes demora a liberar a porta 3000 (`TimeWait`), exigindo finalização manual de processos ou breve espera entre reinicializações do servidor.
 - **Remotion**: Necessário revisar o pipeline de vídeos dinâmicos.
 - **Webhooks & Realtime Sync**: Pendente expansão futura.
 
 ## Próximos Passos
 1. **Revisão Remotion**: Validar a geração de vídeos dinâmicos com os dados do Protheus.
-2. **Realtime Sync**: Implementar o event stream centralizado para sincronização em tempo real entre ERP e App.
+2. **Realtime Sync**: Implementar o event stream centralizado.
+3. **Frontend Standalone**: Testar execução do frontend (`npx vite`) independente do servidor de eventos se houver persistência de conflito de porta.
 
 ## Observações de Ambiente
-- Servidor Express: Inicializado e testado na porta 3000 (encerrado pelo gerenciador devido a restrição temporária de memória do sistema, mas pronto para reinicialização com `npm run dev`).
 - Supabase: Conectado e validado.
-- Build: Passando com sucesso.
+- Build: Passando com sucesso em todas as etapas.
