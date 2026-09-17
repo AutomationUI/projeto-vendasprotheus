@@ -894,50 +894,131 @@ export default function FlowStudio() {
 
   // Run flowchart execution simulation
   const handleSimulateFlow = (customPath?: string[]) => {
-    setIsSimulating(true);
-    setActiveSimPath([]);
-    setSimLogs([]);
+    // Validate preconditions
+    if (!reactFlowInstance) {
+      toast.error("Canvas não inicializado", {
+        description: "Aguarde o carregamento completo do canvas antes de simular."
+      });
+      return;
+    }
 
-    const path = (customPath && customPath.length > 0)
-      ? customPath
-      : activeTemplate.meta.calculateSimPath(simInputs);
-      
-    let stepIndex = 0;
-    const now = new Date();
+    if (nodes.length === 0) {
+      toast.error("Nenhum nó no fluxo", {
+        description: "Carregue um template ou adicione nós antes de simular."
+      });
+      return;
+    }
 
-    const interval = setInterval(() => {
-      if (stepIndex < path.length) {
-        const currentTargetId = path[stepIndex];
-        const targetNode = nodes.find(n => n.id === currentTargetId);
-        
-        setActiveSimPath(prev => [...prev, currentTargetId]);
-        
-        if (targetNode && reactFlowInstance) {
-          reactFlowInstance.setCenter(targetNode.position.x, targetNode.position.y, { zoom: 1.15, duration: 300 });
-        }
-        
-        setSimLogs(prev => [
-          ...prev,
-          {
-            step: stepIndex + 1,
-            nodeId: currentTargetId,
-            label: targetNode?.data.label || currentTargetId,
-            outcome: targetNode?.data.config.actionOutcome || 
-                     (targetNode?.data.type === "condition" ? "Condição Avaliada com Sucesso" : targetNode?.data.type === "businessRule" ? "Regra de Negócio Auditada" : "Executado"),
-            time: new Date(now.getTime() + stepIndex * 1000).toLocaleTimeString("pt-BR"),
-            clauseNumber: targetNode?.data.config.connectedClauseNumber,
-            clauseTitle: targetNode?.data.config.connectedClauseTitle,
-            docTitle: targetNode?.data.config.connectedDocumentTitle
-          }
-        ]);
+    try {
+      setIsSimulating(true);
+      setActiveSimPath([]);
+      setSimLogs([]);
 
-        stepIndex++;
-      } else {
-        clearInterval(interval);
+      let path: string[] = [];
+
+      // Safely calculate simulation path
+      try {
+        path = (customPath && customPath.length > 0)
+          ? customPath
+          : activeTemplate.meta.calculateSimPath?.(simInputs) || nodes.map(n => n.id);
+      } catch (calcError) {
+        console.error("[FlowStudio] Erro ao calcular caminho de simulação:", calcError);
+        toast.error("Erro no cálculo da simulação", {
+          description: "Verifique os parâmetros de entrada do fluxo."
+        });
         setIsSimulating(false);
-        toast.success(`Simulação do fluxo "${activeTemplate.meta.name}" concluída com sucesso!`, { duration: 5000 });
+        return;
       }
-    }, 900);
+
+      if (!path || path.length === 0) {
+        toast.warning("Caminho de simulação vazio", {
+          description: "O fluxo não retornou nós válidos para simular."
+        });
+        setIsSimulating(false);
+        return;
+      }
+
+      let stepIndex = 0;
+      const now = new Date();
+
+      const interval = setInterval(() => {
+        try {
+          if (stepIndex < path.length) {
+            const currentTargetId = path[stepIndex];
+            const targetNode = nodes.find(n => n.id === currentTargetId);
+
+            if (!targetNode) {
+              console.warn(`[FlowStudio] Nó não encontrado no canvas: ${currentTargetId}`);
+              stepIndex++;
+              return;
+            }
+
+            // Validate node position
+            const pos = targetNode.position;
+            if (typeof pos.x !== 'number' || typeof pos.y !== 'number' || isNaN(pos.x) || isNaN(pos.y)) {
+              console.warn(`[FlowStudio] Posição inválida para nó ${currentTargetId}:`, pos);
+              stepIndex++;
+              return;
+            }
+
+            setActiveSimPath(prev => [...prev, currentTargetId]);
+
+            // Safely center on node
+            try {
+              reactFlowInstance.setCenter(pos.x, pos.y, { zoom: 1.15, duration: 300 });
+            } catch (centerError) {
+              console.warn("[FlowStudio] Erro ao centralizar no nó:", centerError);
+            }
+
+            setSimLogs(prev => [
+              ...prev,
+              {
+                step: stepIndex + 1,
+                nodeId: currentTargetId,
+                label: targetNode?.data?.label || currentTargetId,
+                outcome: targetNode?.data?.config?.actionOutcome ||
+                         (targetNode?.data?.type === "condition" ? "Condição Avaliada com Sucesso" : targetNode?.data?.type === "businessRule" ? "Regra de Negócio Auditada" : "Executado"),
+                time: new Date(now.getTime() + stepIndex * 1000).toLocaleTimeString("pt-BR"),
+                clauseNumber: targetNode?.data?.config?.connectedClauseNumber,
+                clauseTitle: targetNode?.data?.config?.connectedClauseTitle,
+                docTitle: targetNode?.data?.config?.connectedDocumentTitle
+              }
+            ]);
+
+            stepIndex++;
+          } else {
+            clearInterval(interval);
+            setIsSimulating(false);
+            toast.success(`Simulação do fluxo "${activeTemplate.meta.name}" concluída com sucesso!`, { duration: 5000 });
+          }
+        } catch (intervalError) {
+          console.error("[FlowStudio] Erro durante intervalo de simulação:", intervalError);
+          clearInterval(interval);
+          setIsSimulating(false);
+          toast.error("Erro durante a simulação", {
+            description: "A simulação foi interrompida devido a um erro inesperado."
+          });
+        }
+      }, 900);
+
+      // Safety timeout - max 30 seconds
+      setTimeout(() => {
+        if (isSimulating) {
+          clearInterval(interval);
+          setIsSimulating(false);
+          toast.warning("Simulação finalizada por tempo limite", {
+            description: "A simulação excedeu o tempo máximo permitido."
+          });
+        }
+      }, 30000);
+
+    } catch (error) {
+      console.error("[FlowStudio] Erro crítico na simulação:", error);
+      setIsSimulating(false);
+      toast.error("Falha ao iniciar simulação", {
+        description: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
   };
 
   // Duplicate selected Node with 1-click

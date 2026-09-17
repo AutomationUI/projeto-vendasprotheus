@@ -352,6 +352,110 @@ export const NORMATIVE_DOCUMENTS_CATALOG: NormativeDocument[] = [
     ]
   },
 
+  // 4b. POP-COM-01-PREMIUM: Roteamento Inteligente de Leads com AI Scoring & Omnichannel
+  {
+    id: "doc-pop-leads-premium-2026",
+    title: "POP-COM-01-PREMIUM: Roteamento Inteligente de Leads com AI Scoring & Omnichannel.pdf",
+    subtitle: "Lead Scoring multi-dimensional, enriquecimento automático, roteamento omnicanal, SLA dinâmico, A/B testing e nurturing",
+    category: "crm",
+    categoryLabel: "Comercial & CRM",
+    type: "Procedimento Operacional Padrão Premium",
+    version: "v1.0",
+    status: "vigente",
+    scope: "global",
+    classification: "confidencial",
+    effectiveDate: "2026-09-17",
+    fileSize: "4.2 MB",
+    description: "Especificação enterprise para roteamento inteligente de leads com scoring AI (firmográfico + comportamental + intenção + fit tecnológico + timing), enriquecimento via Clearbit/Apollo/LinkedIn, roteamento omnicanal (WhatsApp/Slack/E-mail/Teams/Telefone), SLA dinâmico por tier, A/B testing de rotas, sequências de nurturing multi-canal e sincronismo bidirecional com Protheus.",
+    erpTables: ["SA1 - Clientes", "SZ1 - CRM Leads", "SZ2 - Lead Scoring", "SZ3 - Lead Activities", "SZ4 - Nurturing Sequences"],
+    regulatedFlows: ["lead-routing-premium"],
+    clauses: [
+      {
+        id: "LEA-P-1.0",
+        number: "Seção 1.1",
+        title: "Captura Omnichannel e Deduplicação Inteligente",
+        summary: "Leads capturados de múltiplos canais (Web, HubSpot, Salesforce, Pipedrive, Facebook, LinkedIn, Chatbot, WhatsApp, Eventos, CSV) com deduplicação por email+empresa.",
+        fullText: "O sistema deve aceitar leads via webhooks padronizados de todas as fontes integradas. A deduplicação utiliza chave composta email+company_name normalizado, mantendo o lead mais rico (maior score ou mais dados enriquecidos).",
+        erpImpact: "Registro unificado na tabela SZ1 do Protheus",
+        targetNodeIds: ["premium-1"],
+        matchingKeywords: ["omnichannel", "webhook", "hubspot", "salesforce", "pipedrive", "deduplicacao", "chatbot", "whatsapp", "linkedin"]
+      },
+      {
+        id: "LEA-P-2.0",
+        number: "Seção 2.1",
+        title: "Enriquecimento Automático Multi-Provider",
+        summary: "Enriquecimento paralelo via Clearbit, Apollo.io, LinkedIn Sales Navigator e BuiltWith com cache de 24h e fallback manual.",
+        fullText: "Ao receber novo lead, o sistema dispara enriquecimento assíncrono em todos os providers configurados. Campos alvo: tamanho da empresa, receita anual, stack tecnológico, localização, indústria, telefone direto, URL LinkedIn, cargo do contato, tópicos de intenção, concorrentes avaliados. Resultados mesclados com prioridade: Clearbit > Apollo > LinkedIn > BuiltWith.",
+        formulaOrRule: "Enrichment = Merge(Clearbit, Apollo, LinkedIn, BuiltWith) com prioridade definida",
+        erpImpact: "Campos enriquecidos gravados nas tabelas SZ1/SZ2 do Protheus",
+        targetNodeIds: ["premium-2-enrich"],
+        matchingKeywords: ["enriquecimento", "clearbit", "apollo", "linkedin", "builtwith", "firmografico", "intencao", "tecnologias"]
+      },
+      {
+        id: "LEA-P-3.0",
+        number: "Seção 3.2",
+        title: "Lead Scoring Multi-dimensional com Modelo ML",
+        summary: "Score 0-100 combinando: Firmográfico 30%, Comportamental 25%, Intenção 25%, Fit Tecnológico 10%, Timing/Orçamento 10%. Modelo retreinado semanalmente.",
+        fullText: "O motor de scoring calcula cinco dimensões ponderadas: (1) Firmográfico - receita, funcionários, indústria, localização; (2) Comportamental - páginas visitadas, tempo no site, downloads, abertura de e-mails, submissões; (3) Intenção - palavras-chave pesquisadas, comparação com concorrentes, visita à página de preços, solicitação de demo; (4) Fit Tecnológico - compatibilidade de stack, complexidade de migração; (5) Timing - orçamento confirmado, prazo de decisão, autoridade do contato. Score final = Σ(dimensão × peso). Modelo v2.3.1 retreinado semanalmente com dados de conversão.",
+        formulaOrRule: "Score = Firmografico*0.30 + Comportamental*0.25 + Intencao*0.25 + FitTech*0.10 + Timing*0.10",
+        erpImpact: "Score gravado na tabela SZ2 do Protheus com versionamento de modelo",
+        targetNodeIds: ["premium-3-score"],
+        matchingKeywords: ["lead scoring", "ai", "machine learning", "firmografico", "comportamental", "intencao", "fit tecnologico", "timing", "modelo"]
+      },
+      {
+        id: "LEA-P-4.0",
+        number: "Seção 4.1",
+        title: "Classificação em 4 Tiers com SLA Diferenciado",
+        summary: "Tier A (≥85): Key Accounts, SLA 15min. Tier B (65-84): Inside Sales, SLA 1h. Tier C (40-64): Nurturing 45 dias. Tier D (<40): Archive com monitoramento.",
+        fullText: "A classificação por score define o fluxo de atendimento: Tier A (Enterprise) - Key Account Sênior com Account Plan, battlecard, WhatsApp executivo, Slack #war-room, agendamento Calendly/Chili Piper, nurturing executivo mensal. Tier B (Mid-Market) - Inside Sales com roteamento least-loaded, discovery 30min, WhatsApp com link discador, Slack #inside-sales-team, sequência pós-discovery. Tier C (Nurturing) - Sequência multi-canal 8 toques/45 dias (e-mail drip, LinkedIn Ads, WhatsApp opt-in, web push, retargeting programático) com A/B testing ativo. Tier D (Archive) - Monitoramento passivo com retargeting Google/Meta/LinkedIn, re-score mensal, alertas de mudança de cargo/funding.",
+        erpImpact: "Tier gravado no campo customizado SZ1_TIER do Protheus",
+        targetNodeIds: ["premium-4-tier-a", "premium-4-tier-b", "premium-4-tier-c", "premium-4-tier-d"],
+        matchingKeywords: ["tier", "classificacao", "sla", "key account", "inside sales", "nurturing", "archive", "monitoramento"]
+      },
+      {
+        id: "LEA-P-5.0",
+        number: "Seção 5.1",
+        title: "Roteamento Omnichannel por Tier",
+        summary: "WhatsApp Business API (executivo/inside), Slack (war-room/team), E-mail (drip/proposta), LinkedIn Matched Audiences, Calendly/Chili Piper, Web Push, SMS.",
+        fullText: "Cada tier ativa canais específicos: Tier A - WhatsApp executivo com NDA digital + Calendly + Slack #war-room-enterprise com botões interativos. Tier B - WhatsApp inside sales com link discador Aircall + Slack #inside-sales-team com timer SLA. Tier C - E-mail drip educativo (5 toques) + LinkedIn Matched Audiences (carousel/video/ROI) + Retargeting programático (Google/Meta/LinkedIn/DV360) + Web Push. Tier D - Webhook analytics para Data Lake (Mixpanel/Amplitude) + Audiences de retargeting + Alertas de job change/funding.",
+        erpImpact: "Logs de canal gravados na tabela SZ3 do Protheus",
+        targetNodeIds: ["premium-6-whatsapp-exec", "premium-6-whatsapp-inside", "premium-6-email-drip", "premium-7-slack-war", "premium-7-slack-team", "premium-7-linkedin-ads", "premium-8-calendar", "premium-8-sequence-b", "premium-8-retargeting", "premium-6-webhook-analytics"],
+        matchingKeywords: ["whatsapp", "slack", "email", "linkedin", "calendly", "chili piper", "aircall", "retargeting", "webhook", "analytics"]
+      },
+      {
+        id: "LEA-P-6.0",
+        number: "Seção 6.3",
+        title: "Sincronismo Bidirecional Protheus (SA1/SZ1/SZ2/SZ3/SZ4)",
+        summary: "Criação/atualização em tempo real no Protheus com webhook de retorno para atualização de score e atividades.",
+        fullText: "O fluxo premium mantém sincronismo bidirecional: (1) Lead enriquecido e scoreado gravado nas tabelas SA1 (cliente), SZ1 (lead), SZ2 (score), SZ3 (atividades), SZ4 (sequências de nurturing). (2) Webhook de retorno /webhook/protheus/lead-update recebe atualizações do ERP (mudança de status, nova atividade, pedido criado) e re-calcula score em tempo real. (3) Job agendado de re-score a cada 30 dias ou por eventos gatilho (nova atividade, mudança de cargo, funding, mudança de stack).",
+        formulaOrRule: "SyncBidirecional = (CRM -> Protheus: SA1/SZ1/SZ2/SZ3/SZ4) + (Protheus -> CRM: webhook + job 30d)",
+        erpImpact: "Tabelas SA1, SZ1, SZ2, SZ3, SZ4 atualizadas em tempo real via REST Protheus",
+        targetNodeIds: ["premium-9-protheus", "premium-9-score-recheck"],
+        matchingKeywords: ["protheus", "bidirecional", "sincronismo", "sa1", "sz1", "sz2", "sz3", "sz4", "webhook", "re-score"]
+      },
+      {
+        id: "LEA-P-7.0",
+        number: "Seção 7.1",
+        title: "Nurturing Sequences: Executive Briefing & Technical Deep-dive",
+        summary: "Tier A recebe Executive Briefing mensal personalizado. Tier B recebe Technical Deep-dive pós-discovery com sandbox e security docs.",
+        fullText: "Sequências de nutrição premium diferenciadas por tier: Tier A - Executive Briefing mensal com insights de mercado, benchmark setorial, roadmap de produto, personalizado por indústria/concorrentes/tech-stack. Tier B - Technical Deep-dive com convite a workshop técnico, acesso a sandbox, documentação de API, security questionnaire. Ambas com tracking de abertura, cliques, tempo de leitura e conversão para próxima etapa.",
+        erpImpact: "Engajamento gravado na tabela SZ4 do Protheus",
+        targetNodeIds: ["premium-10-nurture-a", "premium-10-nurture-b"],
+        matchingKeywords: ["nurturing", "executive briefing", "technical deep-dive", "sandbox", "security", "workshop", "roadmap"]
+      },
+      {
+        id: "LEA-P-8.0",
+        number: "Seção 8.0",
+        title: "A/B Testing Contínuo de Rotas e Criativos",
+        summary: "Testes A/B ativos em nurturing sequences (variant A vs B), criativos LinkedIn, subject lines e-mail, templates WhatsApp.",
+        fullText: "O sistema executa testes A/B contínuos: (1) Nurturing sequences - variant A (controle) vs B (tratamento) com divisão 50/50, métrica primária taxa de resposta/reply. (2) LinkedIn Ads - carousel vs video vs ROI calculator. (3) E-mail - subject lines, horários, personalização. (4) WhatsApp - templates curtos vs longos, com vs sem NDA link. Resultados alimentam retreinamento do modelo de scoring.",
+        erpImpact: "Resultados de teste gravados para Governance Studio e retreinamento ML",
+        targetNodeIds: ["premium-5-nurture-sequence", "premium-7-linkedin-ads", "premium-6-email-drip", "premium-6-whatsapp-exec", "premium-6-whatsapp-inside"],
+        matchingKeywords: ["ab testing", "a/b test", "variant", "controle", "tratamento", "metrica", "retrain"]
+      }
+    ]
+  },
+
   // 5. Manual de Integração REST e Mensageria TOTVS Protheus ERP
   {
     id: "doc-manual-protheus-erp",
