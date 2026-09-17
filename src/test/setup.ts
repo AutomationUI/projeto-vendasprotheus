@@ -67,3 +67,50 @@ if (!globalThis.crypto?.subtle) {
   });
 }
 
+// Mock AbortSignal and AbortController for vitest/jsdom
+if (typeof globalThis.AbortSignal === "undefined") {
+  globalThis.AbortSignal = class AbortSignal {
+    aborted = false;
+    reason: any = undefined;
+    onabort: (() => void) | null = null;
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return false; }
+    throwIfAborted() {}
+  } as any;
+}
+
+if (typeof globalThis.AbortController === "undefined") {
+  globalThis.AbortController = class AbortController {
+    signal = new (globalThis.AbortSignal as any)();
+    abort(reason?: any) {
+      this.signal.aborted = true;
+      this.signal.reason = reason;
+      if (this.signal.onabort) this.signal.onabort();
+    }
+  } as any;
+}
+
+// Mock sessionStorage and localStorage for tests
+const createStorageMock = () => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (index: number) => Object.keys(store)[index] || null,
+  };
+};
+
+Object.defineProperty(window, "sessionStorage", {
+  value: createStorageMock(),
+  writable: true,
+});
+
+Object.defineProperty(window, "localStorage", {
+  value: createStorageMock(),
+  writable: true,
+});
+

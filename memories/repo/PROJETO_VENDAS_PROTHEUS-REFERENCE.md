@@ -1,7 +1,15 @@
 # Memória do Repositório - Projeto Vendas Protheus
-Última atualização: 2026-09-16 (sessão de estabilização do Document Builder e flag isComposed)
+Última atualização: 2026-09-17 (implementação de sincronização Supabase, módulos omnichannel e governança)
 
 ## Histórico de Mudanças Recentes
+
+### 2026-09-17 — Sincronização Supabase, Módulos Omnichannel e Tipos de Governança
+- **Sincronização de Banco de Dados Supabase (`src/lib/supabase-db.ts`, `src/lib/supabase-schema.sql`, `src/lib/supabase-update-schema.sql`):**
+  - Implementado gerenciador robusto de sincronização com Supabase e scripts de migração idempotentes para tratar tabelas existentes e adição segura de colunas (`organization_id`).
+- **Módulos Omnichannel e WebSocket (`server/src/routes/omnichannel.routes.ts`, `server/src/services/omnichannel.service.ts`, `src/hooks/use-omnichannel-websocket.ts`):**
+  - Adicionadas rotas e serviços avançados omnichannel com suporte a WebSockets em tempo real para gerenciamento de interações e eventos.
+- **Governança (`src/types/governance.ts`):**
+  - Definidos novos tipos TypeScript estruturados para governança, compliance e auditoria.
 
 ### 2026-09-16 — Estabilização de PWA e Document Builder
 - **PWA Manifest (`public/manifest.json`):**

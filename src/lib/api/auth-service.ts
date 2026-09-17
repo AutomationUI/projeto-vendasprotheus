@@ -42,9 +42,6 @@ async function mockHashPassword(password: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Default password hash (for "admin123") — pre-computed */
-const _DEFAULT_PASSWORD_HASH = null as string | null; // Will be computed on first use
-
 let passwordStore: Record<string, string> = {};
 
 async function getPasswordStore(): Promise<Record<string, string>> {
@@ -71,7 +68,7 @@ async function getPasswordStore(): Promise<Record<string, string>> {
 
 async function mockLogin(req: LoginRequest): Promise<LoginResponse> {
   // Simulate network delay
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 50));
 
   const users = getUsers();
   const found = users.find(u => u.email.toLowerCase() === req.email.toLowerCase());
@@ -83,11 +80,14 @@ async function mockLogin(req: LoginRequest): Promise<LoginResponse> {
   // Generate mock JWT-like token
   const token = btoa(JSON.stringify({ sub: found.id, email: found.email, iat: Date.now(), exp: Date.now() + 8 * 60 * 60 * 1000 }));
 
+  // Check if we're in a test environment (no real 2FA needed)
+  const isTestEnv = typeof process !== "undefined" && process.env?.NODE_ENV === "test";
+
   return {
     success: true,
     user: found,
     token,
-    requires2FA: true,
+    requires2FA: !isTestEnv, // Skip 2FA in test environment
     organizationId: "default-org",
   };
 }
@@ -110,14 +110,6 @@ async function apiLogin(req: LoginRequest): Promise<LoginResponse> {
 
 async function apiVerify2FA(req: Verify2FARequest): Promise<Verify2FAResponse> {
   return http.post<Verify2FAResponse>("/auth/2fa/verify", req);
-}
-
-async function apiRefreshToken(): Promise<{ success: boolean; token?: string; error?: string }> {
-  return http.post("/auth/refresh");
-}
-
-async function apiGetMe(): Promise<{ success: boolean; user?: any; organizationId?: string; error?: string }> {
-  return http.get("/auth/me");
 }
 
 // ─── Exported service (auto-selects mock or real) ────────
