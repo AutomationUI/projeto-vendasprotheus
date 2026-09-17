@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -94,6 +95,16 @@ const edgeTypes = {
 };
 
 export default function FlowStudio() {
+  const { user, isAuthenticated, hasPermission } = useAuth();
+
+  // DEBUG: Log auth state on mount
+  console.debug("[FlowStudio] Component mounted - Auth state:", {
+    isAuthenticated,
+    user: user ? { id: user.id, email: user.email, role: user.role, ativo: user.ativo } : null,
+    hasPermissionCrmFlow: hasPermission("crm-flow", "view"),
+    timestamp: new Date().toISOString()
+  });
+
   // Custom Flows persisted in localStorage
   const [customFlows, setCustomFlows] = useState<Record<string, FullFlowTemplate>>(() => {
     try {
@@ -117,6 +128,17 @@ export default function FlowStudio() {
 
   // Initial load from Flows API (with multi-tenant support and offline fallback)
   useEffect(() => {
+    // DEBUG: Log X-Api-Key and auth state before fetching flows
+    const token = sessionStorage.getItem("vendasprotheus_session");
+    const apiKey = import.meta.env.VITE_API_KEY || "dev-api-key";
+    console.debug("[FlowStudio] Pre-fetch state:", {
+      hasSession: !!token,
+      sessionKeys: token ? Object.keys(JSON.parse(token)) : [],
+      apiKey: apiKey,
+      apiKeySource: import.meta.env.VITE_API_KEY ? "env" : "default",
+      timestamp: new Date().toISOString()
+    });
+
     let isMounted = true;
     flowsApiService.listFlows().then((result) => {
       if (isMounted && result.flows && Object.keys(result.flows).length > 0) {

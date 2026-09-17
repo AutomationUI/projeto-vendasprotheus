@@ -3,11 +3,39 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL and Anon Key must be defined in environment variables.');
+// Lazy initialization to avoid throwing at module load time when Supabase is not configured
+let _supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (_supabase) return _supabase;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('[Supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not configured. Supabase features will be disabled.');
+    return null;
+  }
+  _supabase = createClient(supabaseUrl, supabaseAnonKey);
+  return _supabase;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    if (!client) {
+      // Return a no-op function for any method access
+      if (typeof prop === 'string' && prop.startsWith('from')) {
+        return () => ({
+          select: () => ({ data: null, error: new Error('Supabase not configured'), count: 0 }),
+          insert: () => ({ data: null, error: new Error('Supabase not configured') }),
+          update: () => ({ data: null, error: new Error('Supabase not configured') }),
+          delete: () => ({ data: null, error: new Error('Supabase not configured') }),
+          upsert: () => ({ data: null, error: new Error('Supabase not configured') }),
+        });
+      }
+      return () => Promise.resolve({ data: null, error: new Error('Supabase not configured') });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (client as any)[prop];
+  },
+});
 
 export const isSupabaseConfigured = (): boolean => !!supabaseUrl && !!supabaseAnonKey;
 

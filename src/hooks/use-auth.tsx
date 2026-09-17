@@ -43,16 +43,25 @@ const AuthContext = createContext<AuthContextType | null>(null);
 function loadSession(): AppUser | null {
   try {
     const stored = sessionStorage.getItem(SESSION_KEY) || sessionStorage.getItem("protheus_user");
-    if (!stored) return null;
+    console.debug("[AuthProvider] loadSession - raw stored:", stored);
+    if (!stored) {
+      console.warn("[AuthProvider] loadSession - no session found in sessionStorage");
+      return null;
+    }
     const parsed = JSON.parse(stored);
+    console.debug("[AuthProvider] loadSession - parsed:", parsed);
     // Validate the session user still exists and is active
     const currentUser = getUsers().find(u => u.id === parsed.id || u.email === parsed.email);
-    if (currentUser && currentUser.ativo) return currentUser;
+    console.debug("[AuthProvider] loadSession - currentUser from store:", currentUser);
+    if (currentUser && currentUser.ativo) {
+      console.debug("[AuthProvider] loadSession - returning currentUser");
+      return currentUser;
+    }
     if (parsed && (parsed.role || parsed.nome || parsed.name)) {
       const roleValue = typeof parsed.role === "string"
         ? parsed.role
         : (typeof parsed.role === "object" && parsed.role?.name ? parsed.role.name : "admin");
-      return {
+      const fallbackUser = {
         id: parsed.id || "usr-admin",
         nome: parsed.nome || parsed.name || "Administrador",
         email: parsed.email || "admin@protheus.com.br",
@@ -63,11 +72,15 @@ function loadSession(): AppUser | null {
         avatarUrl: parsed.avatarUrl,
         criadoEm: parsed.criadoEm || new Date().toISOString(),
       };
+      console.debug("[AuthProvider] loadSession - returning fallbackUser:", fallbackUser);
+      return fallbackUser;
     }
+    console.warn("[AuthProvider] loadSession - clearing invalid session");
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem("protheus_user");
     return null;
-  } catch {
+  } catch (err) {
+    console.error("[AuthProvider] loadSession - error:", err);
     return null;
   }
 }
@@ -182,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasPermission = useCallback(
     (module: string, action: Permission["actions"][number]) => {
       if (!user) return false;
-      
+
       const roleStr = safeString(user.role);
       // Admin bypass
       if (roleStr === "admin") return true;
@@ -192,10 +205,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const perms = getEffectivePermissionsForUser(user);
         if (!Array.isArray(perms)) return false;
         const modulePerm = perms.find((p) => p && safeString(p.module) === safeString(module));
-        if (!modulePerm) return false;
+        if (!modulePerm) {
+          console.warn("[useAuth] No permission found for module:", module, "| User role:", roleStr, "| Available perms:", perms.map(p => p.module));
+          return false;
+        }
 
         if (action === "view") {
-          return (
+          const result = (
             modulePerm.actions?.includes("view") ||
             modulePerm.actions?.some(
               (a) =>
@@ -204,10 +220,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ) ||
             false
           );
+          console.debug("[useAuth] Permission check:", { module, action, role: roleStr, modulePerm, result });
+          return result;
         }
 
-        return modulePerm.actions?.includes(action) ?? false;
-      } catch {
+        const result = modulePerm.actions?.includes(action) ?? false;
+        console.debug("[useAuth] Permission check:", { module, action, role: roleStr, modulePerm, result });
+        return result;
+      } catch (err) {
+        console.error("[useAuth] Permission check error:", err);
         return false;
       }
     },
