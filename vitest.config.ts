@@ -9,6 +9,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    env: {
+      VITE_SUPABASE_URL: "https://mock.supabase.co",
+      VITE_SUPABASE_ANON_KEY: "mock-anon-key",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
