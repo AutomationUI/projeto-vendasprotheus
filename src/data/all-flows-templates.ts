@@ -2,6 +2,50 @@ import { Node, Edge } from "reactflow";
 import { CRMNodeData, FlowTemplateMeta } from "@/types/crm-flow";
 import { autoConnectFlow } from "@/lib/flow-document-connector";
 
+// Lead Scoring Function for Premium Template
+function calculateLeadScore(input: Record<string, any>): number {
+  // Firmográfico (30%)
+  const revenue = Number(input.faturamentoAnual) || 0;
+  const firmografico = Math.min(100, (revenue / 200000000) * 100); // Max 200M = 100
+
+  // Comportamental (25%)
+  const pages = Number(input.pagesVisitadas) || 0;
+  const timeOnSite = Number(input.tempoNoSite) || 0;
+  const downloads = Number(input.downloadsWhitepaper) || 0;
+  const comportamental = Math.min(100, (pages * 3) + (timeOnSite / 10) + (downloads * 15));
+
+  // Intenção (25%)
+  let intencao = 0;
+  if (input.origemLead?.includes?.("Demo")) intencao += 40;
+  if (input.budgetConfirmado) intencao += 30;
+  if (input.prazoDecisao && Number(input.prazoDecisao.replace(/\D/g, "")) <= 60) intencao += 20;
+  if (input.concorrenteAtual && input.concorrenteAtual !== "Nenhum") intencao += 10;
+
+  // Fit Tecnológico (10%)
+  let fitTech = 50; // base
+  if (input.tecnologiaAtual?.includes?.("Salesforce") || input.tecnologiaAtual?.includes?.("HubSpot")) fitTech += 25;
+  if (!input.tecnologiaAtual?.includes?.("Legacy")) fitTech += 25;
+
+  // Timing/Orçamento (10%)
+  let timing = 0;
+  if (input.budgetConfirmado) timing += 50;
+  const prazo = Number(input.prazoDecisao?.replace(/\D/g, "")) || 999;
+  if (prazo <= 30) timing += 30;
+  else if (prazo <= 60) timing += 20;
+  else if (prazo <= 90) timing += 10;
+  if (input.cargoContato?.match?.(/(CTO|CEO|VP|Diretor|Head|Gerente)/i)) timing += 20;
+
+  const score = Math.round(
+    firmografico * 0.30 +
+    comportamental * 0.25 +
+    intencao * 0.25 +
+    fitTech * 0.10 +
+    timing * 0.10
+  );
+
+  return Math.min(100, Math.max(0, score));
+}
+
 export interface FullFlowTemplate {
   meta: FlowTemplateMeta;
   nodes: Node<CRMNodeData>[];
@@ -1462,6 +1506,493 @@ const RAW_FLOW_TEMPLATES: Record<string, FullFlowTemplate> = {
       { id: "pcp-e3", source: "pcp-3-stock", target: "pcp-4-op-gen", sourceHandle: "true", label: "Estoque OK" },
       { id: "pcp-e4", source: "pcp-3-stock", target: "pcp-5-sc1-buy", sourceHandle: "false", label: "Sem Insumo" },
       { id: "pcp-e5", source: "pcp-4-op-gen", target: "pcp-6-sync-crm" }
+    ]
+  },
+
+  // ─── 11. Roteamento Inteligente de Leads PREMIUM (Enterprise) ───────────
+  "lead-routing-premium": {
+    meta: {
+      id: "lead-routing-premium",
+      name: "Roteamento Inteligente de Leads PREMIUM",
+      category: "crm",
+      categoryLabel: "Comercial & CRM",
+      description: "Enterprise-grade lead routing com scoring multi-dimensional (firmográfico + comportamental + intenção), enriquecimento automático via Clearbit/Apollo, roteamento omnicanal (WhatsApp/Slack/E-mail/Teams/Telefone), SLA dinâmico por tier, A/B testing de rotas, nurturing sequences e analytics em tempo real.",
+      status: "Premium",
+      version: "v1.0",
+      tags: ["Leads", "Enterprise", "Premium", "AI Scoring", "Omnichannel", "A/B Testing", "Enrichment", "Nurturing"],
+      erpTables: ["SA1 - Clientes", "SZ1 - CRM Leads", "SZ2 - Lead Scoring", "SZ3 - Lead Activities", "SZ4 - Nurturing Sequences"],
+      nodesCount: 18,
+      simDefaultInputs: {
+        nomeEmpresa: "TechFlow Analytics S/A",
+        faturamentoAnual: 120000000,
+        segmento: "SaaS B2B",
+        emailContato: "cto@techflow.com.br",
+        telefoneContato: "+55 11 99999-8888",
+        cargoContato: "CTO",
+        origemLead: "Inbound - Demo Request",
+        pagesVisitadas: 12,
+        tempoNoSite: 420,
+        downloadsWhitepaper: 3,
+        tecnologiaAtual: "Salesforce + HubSpot",
+        concorrenteAtual: "Nenhum",
+        budgetConfirmado: true,
+        prazoDecisao: "30 dias"
+      },
+      calculateSimPath: (input) => {
+        const score = calculateLeadScore(input);
+        if (score >= 85) {
+          return ["premium-1", "premium-2-enrich", "premium-3-score", "premium-4-tier-a", "premium-5-key-account", "premium-6-whatsapp-exec", "premium-7-slack-war", "premium-8-calendar", "premium-9-protheus", "premium-10-nurture-a"];
+        } else if (score >= 65) {
+          return ["premium-1", "premium-2-enrich", "premium-3-score", "premium-4-tier-b", "premium-5-inside-sales", "premium-6-whatsapp-inside", "premium-7-slack-team", "premium-8-sequence-b", "premium-9-protheus", "premium-10-nurture-b"];
+        } else if (score >= 40) {
+          return ["premium-1", "premium-2-enrich", "premium-3-score", "premium-4-tier-c", "premium-5-nurture-sequence", "premium-6-email-drip", "premium-7-linkedin-ads", "premium-8-retargeting", "premium-9-score-recheck"];
+        } else {
+          return ["premium-1", "premium-2-enrich", "premium-3-score", "premium-4-tier-d", "premium-5-archive", "premium-6-webhook-analytics"];
+        }
+      }
+    },
+    nodes: [
+      {
+        id: "premium-1",
+        type: "triggerNode",
+        position: { x: 260, y: 20 },
+        data: {
+          label: "Entrada de Novo Lead (Multi-canal)",
+          type: "trigger",
+          icon: "zap",
+          description: "Captura leads de formulários web, API HubSpot/Salesforce/Pipedrive, chatbot, WhatsApp Business, eventos, indicações e importação CSV.",
+          config: {
+            source: "Omnichannel Lead Capture API",
+            webhookEndpoints: ["/webhook/hubspot", "/webhook/salesforce", "/webhook/pipedrive", "/webhook/facebook", "/webhook/linkedin", "/webhook/chatbot"],
+            dedupKey: "email+company"
+          }
+        }
+      },
+      {
+        id: "premium-2-enrich",
+        type: "actionNode",
+        position: { x: 260, y: 160 },
+        data: {
+          label: "Enriquecimento Automático (Clearbit/Apollo/LinkedIn)",
+          type: "action",
+          icon: "database",
+          description: "Busca dados firmográficos (tamanho, receita, tecnologias, localização), dados de contato (telefone direto, LinkedIn, cargo), intenção (tópicos pesquisados, concorrentes avaliados) e tecnologias instaladas.",
+          config: {
+            enrichmentProviders: ["Clearbit", "Apollo.io", "LinkedIn Sales Navigator", "BuiltWith"],
+            enrichFields: ["companySize", "annualRevenue", "technologies", "location", "industry", "directPhone", "linkedinUrl", "jobTitle", "intentTopics", "competitors"],
+            cacheTtlHours: 24,
+            fallbackToManual: true
+          }
+        }
+      },
+      {
+        id: "premium-3-score",
+        type: "operationNode",
+        position: { x: 260, y: 300 },
+        data: {
+          label: "Lead Scoring Multi-dimensional (AI)",
+          type: "operation",
+          icon: "calc",
+          description: "Calcula score 0-100 combinando: Firmográfico (30%), Comportamental (25%), Intenção (25%), Fit Tecnológico (10%), Timing/Orçamento (10%). Modelo ML retreinado semanalmente.",
+          config: {
+            formula: "Score = (Firmografico*0.30) + (Comportamental*0.25) + (Intencao*0.25) + (FitTech*0.10) + (Timing*0.10)",
+            firmograficoWeights: { revenue: 0.4, employees: 0.3, industry: 0.2, location: 0.1 },
+            comportamentalWeights: { pagesVisited: 0.3, timeOnSite: 0.2, downloads: 0.2, emailOpens: 0.15, formSubmits: 0.15 },
+            intencaoWeights: { keywords: 0.4, competitorComparison: 0.3, pricingPage: 0.2, demoRequest: 0.1 },
+            fitTechWeights: { compatibleStack: 0.6, migrationComplexity: 0.4 },
+            timingWeights: { budgetConfirmed: 0.5, decisionTimeline: 0.3, authority: 0.2 },
+            modelVersion: "v2.3.1",
+            lastRetrained: "2026-09-15"
+          }
+        }
+      },
+      {
+        id: "premium-4-tier-a",
+        type: "conditionNode",
+        position: { x: 80, y: 440 },
+        data: {
+          label: "Tier A (Score ≥ 85) - Enterprise",
+          type: "condition",
+          icon: "fork",
+          description: "Leads qualificados para abordagem direta de Key Accounts com SLA de 15 minutos.",
+          config: { field: "Lead Score", operator: ">=", value: "85" }
+        }
+      },
+      {
+        id: "premium-4-tier-b",
+        type: "conditionNode",
+        position: { x: 260, y: 440 },
+        data: {
+          label: "Tier B (Score 65-84) - Mid-Market",
+          type: "condition",
+          icon: "fork",
+          description: "Leads para Inside Sales com SLA de 1 hora.",
+          config: { field: "Lead Score", operator: "range", value: "65-84" }
+        }
+      },
+      {
+        id: "premium-4-tier-c",
+        type: "conditionNode",
+        position: { x: 440, y: 440 },
+        data: {
+          label: "Tier C (Score 40-64) - Nurturing",
+          type: "condition",
+          icon: "fork",
+          description: "Leads que entram em sequência de nutrição automatizada multi-canal.",
+          config: { field: "Lead Score", operator: "range", value: "40-64" }
+        }
+      },
+      {
+        id: "premium-4-tier-d",
+        type: "conditionNode",
+        position: { x: 620, y: 440 },
+        data: {
+          label: "Tier D (Score < 40) - Archive/Monitor",
+          type: "condition",
+          icon: "fork",
+          description: "Leads de baixo fit: arquivados com monitoramento passivo via retargeting.",
+          config: { field: "Lead Score", operator: "<", value: "40" }
+        }
+      },
+      {
+        id: "premium-5-key-account",
+        type: "actionNode",
+        position: { x: 80, y: 580 },
+        data: {
+          label: "Atribuir Key Account Sênior + Account Plan",
+          type: "action",
+          icon: "user-plus",
+          description: "Vincula ao Key Account designado, gera Account Plan automático com stakeholders, estratégia de entrada e competitive battlecard.",
+          config: {
+            assigneeGroup: "Key Accounts Sênior",
+            generateAccountPlan: true,
+            battlecardTemplate: "Enterprise vs Competitors",
+            stakeholderMapping: true,
+            protheusSyncEnabled: true,
+            protheusTable: "SA1 - Clientes",
+            protheusOperation: "incluir"
+          }
+        }
+      },
+      {
+        id: "premium-5-inside-sales",
+        type: "actionNode",
+        position: { x: 260, y: 580 },
+        data: {
+          label: "Direcionar Inside Sales (SLA 1h)",
+          type: "action",
+          icon: "user-plus",
+          description: "Atribui ao Inside Sales disponível com menor carga, agenda call de discovery e envia briefing enriquecido.",
+          config: {
+            assigneeGroup: "Inside Sales Team",
+            routingLogic: "least-loaded-round-robin",
+            autoScheduleDiscovery: true,
+            discoveryDurationMin: 30,
+            briefingTemplate: "Enriched Lead Brief"
+          }
+        }
+      },
+      {
+        id: "premium-5-nurture-sequence",
+        type: "actionNode",
+        position: { x: 440, y: 580 },
+        data: {
+          label: "Iniciar Nurturing Sequence Multi-canal",
+          type: "action",
+          icon: "mail",
+          description: "Insere na sequência de nutrição: E-mail Drip (5 toques), LinkedIn Ads (retargeting), WhatsApp opt-in, Web Push.",
+          config: {
+            sequenceId: "nurture-mid-market-v3",
+            channels: ["email", "linkedin", "whatsapp", "web-push"],
+            touchpoints: 8,
+            durationDays: 45,
+            abTestEnabled: true,
+            variantControl: "A"
+          }
+        }
+      },
+      {
+        id: "premium-5-archive",
+        type: "actionNode",
+        position: { x: 620, y: 580 },
+        data: {
+          label: "Arquivar com Monitoramento Passivo",
+          type: "action",
+          icon: "archive",
+          description: "Move para lista de monitoramento passivo: retargeting programático, alerta de mudança de cargo/empresa, re-score mensal.",
+          config: {
+            monitoringEnabled: true,
+            retargetingAudiences: ["Google Ads", "LinkedIn", "Meta"],
+            reScoreFrequencyDays: 30,
+            alertOnJobChange: true,
+            alertOnFunding: true
+          }
+        }
+      },
+      {
+        id: "premium-6-whatsapp-exec",
+        type: "actionNode",
+        position: { x: 80, y: 720 },
+        data: {
+          label: "WhatsApp Executivo Personalizado",
+          type: "action",
+          icon: "whatsapp",
+          description: "Envia mensagem via WhatsApp Business API para o decisor com case do segmento, link de agenda Calendly e NDA digital.",
+          config: {
+            template: "Executive Outreach Premium",
+            calendarLink: "calendly.com/key-accounts/demo",
+            ndaDigital: true,
+            trackOpens: true
+          }
+        }
+      },
+      {
+        id: "premium-6-whatsapp-inside",
+        type: "actionNode",
+        position: { x: 260, y: 720 },
+        data: {
+          label: "WhatsApp Inside Sales + Link Discador",
+          type: "action",
+          icon: "whatsapp",
+          description: "Envia mensagem com link direto para discador VoIP (Aircall/CloudTalk) e resumo do lead enriquecido.",
+          config: {
+            template: "Inside Sales Quick Connect",
+            dialerLink: "app.aircall.io/lead/{{leadId}}",
+            includeEnrichmentSummary: true
+          }
+        }
+      },
+      {
+        id: "premium-6-email-drip",
+        type: "actionNode",
+        position: { x: 440, y: 720 },
+        data: {
+          label: "E-mail Drip: Educação + Prova Social",
+          type: "action",
+          icon: "mail",
+          description: "Sequência de 5 e-mails: 1) Artigo técnico, 2) Case study similar, 3) ROI calculator, 4) Webinar convite, 5) Consulta gratuita.",
+          config: {
+            sequence: "nurture-education-v2",
+            personalizationTokens: ["firstName", "company", "industry", "painPoint", "competitor"]
+          }
+        }
+      },
+      {
+        id: "premium-6-webhook-analytics",
+        type: "actionNode",
+        position: { x: 620, y: 720 },
+        data: {
+          label: "Webhook Analytics: Lead Archived",
+          type: "action",
+          icon: "activity",
+          description: "Envia evento para Data Lake / Mixpanel / Amplitude para análise de funil de aquisição e otimização de canais.",
+          config: {
+            webhookUrl: "https://analytics.company.com/events/lead-archived",
+            payload: "full-lead-profile+score-breakdown"
+          }
+        }
+      },
+      {
+        id: "premium-7-slack-war",
+        type: "actionNode",
+        position: { x: 80, y: 860 },
+        data: {
+          label: "Alerta Slack #war-room-enterprise",
+          type: "action",
+          icon: "bell",
+          description: "Notifica canal de guerra com @channel, botões de ação (Aceitar/Delegar/Agendar) e link para Account Plan.",
+          config: {
+            slackChannel: "#war-room-enterprise",
+            interactiveButtons: ["Aceitar Lead", "Delegar", "Agendar Call"],
+            includeAccountPlanLink: true
+          }
+        }
+      },
+      {
+        id: "premium-7-slack-team",
+        type: "actionNode",
+        position: { x: 260, y: 860 },
+        data: {
+          label: "Alerta Slack #inside-sales-team",
+          type: "action",
+          icon: "bell",
+          description: "Notifica equipe Inside Sales com @here, cards interativos e métricas de SLA em tempo real.",
+          config: {
+            slackChannel: "#inside-sales-team",
+            interactiveButtons: ["Aceitar", "Reagendar", "Passar Adiante"],
+            showSlaTimer: true
+          }
+        }
+      },
+      {
+        id: "premium-7-linkedin-ads",
+        type: "actionNode",
+        position: { x: 440, y: 860 },
+        data: {
+          label: "LinkedIn Matched Audiences Retargeting",
+          type: "action",
+          icon: "linkedin",
+          description: "Adiciona lead à lista de matched audiences no LinkedIn para campanhas de retargeting com criativos dinâmicos por segmento.",
+          config: {
+            audienceName: "Nurturing Mid-Market {{segment}}",
+            creativeTemplates: ["Carousel Cases", "Video Demo", "ROI Calculator"],
+            bidStrategy: "max-delivery"
+          }
+        }
+      },
+      {
+        id: "premium-8-calendar",
+        type: "actionNode",
+        position: { x: 80, y: 1000 },
+        data: {
+          label: "Agendamento Inteligente (Calendly/Chili Piper)",
+          type: "action",
+          icon: "calendar",
+          description: "Detecta fuso horário, oferece slots do Key Account, confirma via WhatsApp/E-mail e cria evento no CRM + Google Calendar/Outlook.",
+          config: {
+            schedulingTool: "Chili Piper",
+            timezoneDetection: true,
+            autoConfirmWhatsApp: true,
+            crmSync: true,
+            bufferMinutes: 15
+          }
+        }
+      },
+      {
+        id: "premium-8-sequence-b",
+        type: "actionNode",
+        position: { x: 260, y: 1000 },
+        data: {
+          label: "Sequência B: Discovery + Proposta",
+          type: "action",
+          icon: "mail",
+          description: "Após call de discovery: envia proposta personalizada com ROI calculator, trial access e agendamento de demo técnica.",
+          config: {
+            sequence: "post-discovery-proposal-v1",
+            includeRoiCalculator: true,
+            trialAccessLink: "trial.company.com/{{leadId}}",
+            technicalDemoScheduling: true
+          }
+        }
+      },
+      {
+        id: "premium-8-retargeting",
+        type: "actionNode",
+        position: { x: 440, y: 1000 },
+        data: {
+          label: "Retargeting Programático Multi-canal",
+          type: "action",
+          icon: "target",
+          description: "Ativa campanhas no Google Display, Meta, LinkedIn, Programmatic (DV360) com criativos dinâmicos baseados em páginas visitadas.",
+          config: {
+            platforms: ["Google Display", "Meta", "LinkedIn", "DV360"],
+            dynamicCreatives: true,
+            frequencyCap: 3,
+            lookalikeExpansion: true
+          }
+        }
+      },
+      {
+        id: "premium-9-protheus",
+        type: "actionNode",
+        position: { x: 80, y: 1140 },
+        data: {
+          label: "Provisionar no Protheus (SA1/SZ1) + Sync Bidirecional",
+          type: "action",
+          icon: "database",
+          description: "Cria/atualiza cliente no SA1, lead no SZ1, scoring no SZ2, atividades no SZ3. Webhook de volta atualiza score em tempo real.",
+          config: {
+            protheusSyncEnabled: true,
+            tables: ["SA1 - Clientes", "SZ1 - CRM Leads", "SZ2 - Lead Scoring", "SZ3 - Lead Activities"],
+            bidirectional: true,
+            webhookReturn: "/webhook/protheus/lead-update"
+          }
+        }
+      },
+      {
+        id: "premium-9-score-recheck",
+        type: "actionNode",
+        position: { x: 440, y: 1140 },
+        data: {
+          label: "Agendar Re-score em 30 Dias",
+          type: "action",
+          icon: "refresh",
+          description: "Agenda job assíncrono para re-calcular score com novos dados comportamentais e firmográficos atualizados.",
+          config: {
+            scheduleInDays: 30,
+            triggerOn: ["new-activity", "job-change", "funding-event", "tech-stack-change"],
+            webhook: "/api/v1/leads/{{leadId}}/rescore"
+          }
+        }
+      },
+      {
+        id: "premium-10-nurture-a",
+        type: "actionNode",
+        position: { x: 80, y: 1280 },
+        data: {
+          label: "Nurturing Executivo: Executive Briefing",
+          type: "action",
+          icon: "file",
+          description: "Envia Executive Briefing mensal personalizado com insights de mercado, benchmark do setor e roadmap de produto.",
+          config: {
+            sequence: "executive-briefing-monthly",
+            frequency: "monthly",
+            personalization: "industry+competitors+tech-stack"
+          }
+        }
+      },
+      {
+        id: "premium-10-nurture-b",
+        type: "actionNode",
+        position: { x: 260, y: 1280 },
+        data: {
+          label: "Nurturing Pós-Discovery: Technical Deep-dive",
+          type: "action",
+          icon: "cpu",
+          description: "Convida para Technical Workshop, envia documentação de API, sandbox access e security questionnaire.",
+          config: {
+            sequence: "technical-deep-dive",
+            workshopInvite: true,
+            sandboxAccess: true,
+            securityDocs: true
+          }
+        }
+      }
+    ],
+    edges: [
+      { id: "premium-e1", source: "premium-1", target: "premium-2-enrich" },
+      { id: "premium-e2", source: "premium-2-enrich", target: "premium-3-score" },
+      { id: "premium-e3", source: "premium-3-score", target: "premium-4-tier-a", sourceHandle: "tier-a", label: "Score ≥ 85" },
+      { id: "premium-e4", source: "premium-3-score", target: "premium-4-tier-b", sourceHandle: "tier-b", label: "Score 65-84" },
+      { id: "premium-e5", source: "premium-3-score", target: "premium-4-tier-c", sourceHandle: "tier-c", label: "Score 40-64" },
+      { id: "premium-e6", source: "premium-3-score", target: "premium-4-tier-d", sourceHandle: "tier-d", label: "Score < 40" },
+
+      // Tier A path
+      { id: "premium-e7", source: "premium-4-tier-a", target: "premium-5-key-account" },
+      { id: "premium-e8", source: "premium-5-key-account", target: "premium-6-whatsapp-exec" },
+      { id: "premium-e9", source: "premium-6-whatsapp-exec", target: "premium-7-slack-war" },
+      { id: "premium-e10", source: "premium-7-slack-war", target: "premium-8-calendar" },
+      { id: "premium-e11", source: "premium-8-calendar", target: "premium-9-protheus" },
+      { id: "premium-e12", source: "premium-9-protheus", target: "premium-10-nurture-a" },
+
+      // Tier B path
+      { id: "premium-e13", source: "premium-4-tier-b", target: "premium-5-inside-sales" },
+      { id: "premium-e14", source: "premium-5-inside-sales", target: "premium-6-whatsapp-inside" },
+      { id: "premium-e15", source: "premium-6-whatsapp-inside", target: "premium-7-slack-team" },
+      { id: "premium-e16", source: "premium-7-slack-team", target: "premium-8-sequence-b" },
+      { id: "premium-e17", source: "premium-8-sequence-b", target: "premium-9-protheus" },
+      { id: "premium-e18", source: "premium-9-protheus", target: "premium-10-nurture-b" },
+
+      // Tier C path
+      { id: "premium-e19", source: "premium-4-tier-c", target: "premium-5-nurture-sequence" },
+      { id: "premium-e20", source: "premium-5-nurture-sequence", target: "premium-6-email-drip" },
+      { id: "premium-e21", source: "premium-6-email-drip", target: "premium-7-linkedin-ads" },
+      { id: "premium-e22", source: "premium-7-linkedin-ads", target: "premium-8-retargeting" },
+      { id: "premium-e23", source: "premium-8-retargeting", target: "premium-9-score-recheck" },
+
+      // Tier D path
+      { id: "premium-e24", source: "premium-4-tier-d", target: "premium-5-archive" },
+      { id: "premium-e25", source: "premium-5-archive", target: "premium-6-webhook-analytics" }
     ]
   }
 };
