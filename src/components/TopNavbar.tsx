@@ -38,7 +38,9 @@ import {
   SlidersHorizontal,
   Layers,
   Activity,
-  Globe
+  Globe,
+  Database,
+  Server
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
@@ -201,8 +203,9 @@ const navIcons: MenuItem[] = [
     },
     dropdownItems: [
       { title: "Hub Multi-ERP (Protheus, SAP, Omie)", url: "/integracao-erp?tab=multierp", icon: Globe },
-      { title: "Monitor de Conectores", url: "/integracao-erp", icon: Link2 },
-      { title: "Sincronização & Tabelas", url: "/integracao-erp?tab=sync", icon: Activity },
+      { title: "Monitor de Conectores", url: "/integracao-erp?tab=multierp", icon: Activity },
+      { title: "Sincronização & Tabelas (Supabase)", url: "/integracao-erp?tab=sync", icon: Database },
+      { title: "TOTVS Protheus (Endpoints & Logs)", url: "/integracao-erp?tab=protheus", icon: Server },
       { title: "Logs & Diagnósticos", url: "/integracao-erp?tab=logs", icon: Clock },
     ]
   },

@@ -22,6 +22,10 @@ import { supabaseDb } from "./supabase-db";
 import { getEffectivePermissionsForUser } from "./permissions-store";
 import { safeString } from "./utils";
 
+// Currency formatter for BRL
+export const fmt = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 function getCurrentUserForSecurity() {
   if (typeof sessionStorage === "undefined") return null;
   try {

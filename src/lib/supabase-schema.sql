@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.clientes (
     total_compras NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
     ultima_compra TIMESTAMPTZ,
     erp_id TEXT,
+    status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo', 'prospect', 'bloqueado')),
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     UNIQUE(organization_id, cnpj)

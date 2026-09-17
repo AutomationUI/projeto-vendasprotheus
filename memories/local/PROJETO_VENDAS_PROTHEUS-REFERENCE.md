@@ -26,5 +26,7 @@ O projeto está em fase avançada de desenvolvimento com forte evolução na int
 3. **Refinamento de Testes Unitários**: Ajustar mocks de autenticação (`use-auth`) e governança.
 
 ## Observações de Ambiente
-- Supabase: Conectado, schemas atualizados e validados.
+- Supabase: **Credenciais precisam ser recriadas** (usuários e schema). Executar `supabase-update-schema.sql` no SQL Editor do Supabase Dashboard.
 - Build: Passando com sucesso em todas as etapas.
+- Servidor Dev: Rodando em `http://localhost:3000` (Backend + Frontend via Vite middleware).
+- Auth Mode: Mock (`VITE_USE_MOCK=true`) para desenvolvimento/testes.

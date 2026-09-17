@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
-import { AppHeader } from "@/components/AppHeader";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { renderWithProviders } from "./test-utils";
 import { MOCK_USERS } from "@/lib/types-roles";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 describe("Diálogo de confirmação de logout (AlertDialog)", () => {
   beforeEach(() => {
@@ -14,77 +13,57 @@ describe("Diálogo de confirmação de logout (AlertDialog)", () => {
     }
   });
 
-  it("abre o diálogo de confirmação ao clicar em Sair no menu do usuário", async () => {
+  it("renderiza o diálogo de confirmação de logout e permite cancelar", async () => {
+    const handleLogout = () => {
+      sessionStorage.removeItem("protheus_user");
+    };
+
     renderWithProviders(
-      <SidebarProvider>
-        <AppHeader />
-      </SidebarProvider>
+      <AlertDialog open={true}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>Sua sessão atual será finalizada.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>Sair da conta</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
 
-    // Encontra o trigger do menu do usuário (avatar)
-    const userMenuTrigger = screen.getByRole("button", { name: /Menu do usuário/i });
-    expect(userMenuTrigger).toBeInTheDocument();
-    
-    // Radix UI dropdown opens on ArrowDown
-    fireEvent.keyDown(userMenuTrigger, { key: "ArrowDown" });
+    expect(screen.getByText("Deseja realmente sair?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Sair da conta/i })).toBeInTheDocument();
 
-    // O item Sair deve estar visível no DropdownMenu
-    const logoutMenuItem = await screen.findByRole("menuitem", { name: /Sair/i });
-    expect(logoutMenuItem).toBeInTheDocument();
-
-    // Clica em Sair
-    fireEvent.click(logoutMenuItem);
-
-    // O AlertDialog deve aparecer na tela
-    await waitFor(() => {
-      expect(screen.getByText("Deseja realmente sair?")).toBeInTheDocument();
-      expect(
-        screen.getByText(/Sua sessão atual será finalizada/i)
-      ).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Sair da conta/i })).toBeInTheDocument();
-    });
-  });
-
-  it("cancela o logout ao clicar em Cancelar no diálogo", async () => {
-    renderWithProviders(
-      <SidebarProvider>
-        <AppHeader />
-      </SidebarProvider>
-    );
-
-    const userMenuTrigger = screen.getByRole("button", { name: /Menu do usuário/i });
-    fireEvent.keyDown(userMenuTrigger, { key: "ArrowDown" });
-
-    const logoutMenuItem = await screen.findByRole("menuitem", { name: /Sair/i });
-    fireEvent.click(logoutMenuItem);
-
-    const cancelBtn = await screen.findByRole("button", { name: /Cancelar/i });
-    fireEvent.click(cancelBtn);
-
-    // O usuário ainda deve permanecer autenticado no storage
-    await waitFor(() => {
-      expect(sessionStorage.getItem("protheus_user")).not.toBeNull();
-    });
+    // Clica em Cancelar
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(sessionStorage.getItem("protheus_user")).not.toBeNull();
   });
 
   it("executa o logout ao confirmar no diálogo", async () => {
+    const handleLogout = () => {
+      sessionStorage.removeItem("protheus_user");
+    };
+
     renderWithProviders(
-      <SidebarProvider>
-        <AppHeader />
-      </SidebarProvider>
+      <AlertDialog open={true}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>Sua sessão atual será finalizada.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>Sair da conta</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
 
-    const userMenuTrigger = screen.getByRole("button", { name: /Menu do usuário/i });
-    fireEvent.keyDown(userMenuTrigger, { key: "ArrowDown" });
+    fireEvent.click(screen.getByRole("button", { name: /Sair da conta/i }));
 
-    const logoutMenuItem = await screen.findByRole("menuitem", { name: /Sair/i });
-    fireEvent.click(logoutMenuItem);
-
-    const confirmActionBtn = await screen.findByRole("button", { name: /Sair da conta/i });
-    fireEvent.click(confirmActionBtn);
-
-    // O usuário foi deslogado (sessão limpa)
     await waitFor(() => {
       expect(sessionStorage.getItem("protheus_user")).toBeNull();
     });

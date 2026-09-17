@@ -114,3 +114,62 @@ Object.defineProperty(window, "localStorage", {
   writable: true,
 });
 
+// Mock Supabase client for unit tests
+const mockSupabaseFrom = (table: string) => ({
+  select: (columns?: string, options?: any) => {
+    if (options?.head) {
+      return Promise.resolve({ data: [], error: null, count: 0 });
+    }
+    return {
+      eq: () => ({
+        single: () => Promise.resolve({ data: null, error: null }),
+        order: () => Promise.resolve({ data: [], error: null }),
+        then: (resolve: any) => resolve({ data: [], error: null }),
+      }),
+      order: () => Promise.resolve({ data: [], error: null }),
+      then: (resolve: any) => resolve({ data: [], error: null, count: 0 }),
+    };
+  },
+  insert: (values: any) => ({
+    select: () => ({
+      single: () => Promise.resolve({ data: values, error: null }),
+      then: (resolve: any) => resolve({ data: [values], error: null }),
+    }),
+  }),
+  update: (values: any) => ({
+    eq: () => ({
+      select: () => ({
+        single: () => Promise.resolve({ data: values, error: null }),
+      }),
+    }),
+  }),
+  delete: () => ({
+    eq: () => Promise.resolve({ error: null }),
+  }),
+  upsert: (values: any) => ({
+    select: () => ({
+      single: () => Promise.resolve({ data: values, error: null }),
+      then: (resolve: any) => resolve({ data: [values], error: null }),
+    }),
+  }),
+});
+
+vi.mock("@/lib/supabase", () => ({
+  supabase: {
+    from: mockSupabaseFrom,
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      signInWithPassword: () => Promise.resolve({ data: { user: { id: "mock-user" } }, error: null }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+  },
+  isSupabaseConfigured: () => true,
+  SUPABASE_URL: "https://mock.supabase.co",
+  checkSupabaseHealth: () => Promise.resolve({
+    connected: true,
+    latencyMs: 10,
+    tables: {},
+  }),
+  KNOWN_TABLES: [],
+}));
+

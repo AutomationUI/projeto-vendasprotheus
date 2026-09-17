@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   RefreshCw, Zap, Search, Filter, CheckCircle2, XCircle, AlertCircle, Clock, Save, Pencil, Database,
-  Cpu, Server, Globe, Link2, ShieldCheck, ArrowRight, Layers, Activity, Radio, Lock, ShieldAlert, Check
+  Cpu, Server, Globe, Link2, ShieldCheck, ArrowRight, Layers, Activity, Check
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SupabaseSyncManager } from "@/components/SupabaseSyncManager";
@@ -166,7 +166,7 @@ export default function IntegracaoERPPage() {
     } else if (tabQuery === "multierp" || tabQuery === "connectors") {
       setActiveIntegrationTab("multierp");
     } else if (tabQuery === "logs") {
-      setActiveIntegrationTab("standalone");
+      setActiveIntegrationTab("protheus"); // Logs estão na aba Protheus
       setLogFilter("all");
     }
   }, [location.pathname, searchParams]);

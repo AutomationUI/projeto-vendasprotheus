@@ -97,6 +97,8 @@ export function useSystemStatusWebSocket() {
       };
 
       ws.onerror = () => {
+        // Don't set error state for expected connection failures (e.g., in test env)
+        // The fallback interval will handle local status updates
         setConnectionState("reconnecting");
       };
 

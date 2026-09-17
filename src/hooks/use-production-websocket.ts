@@ -133,7 +133,9 @@ export function useProductionWebSocket() {
       };
 
       ws.onerror = () => {
-        setError("Não foi possível conectar ao Event Hub central em tempo real.");
+        // Don't set error state for expected connection failures (e.g., in test env)
+        // The reconnect logic will handle local fallback
+        setError("Não foi possível conectar ao Event Hub central em tempo real (usando modo local).");
       };
     } catch {
       setConnected(false);

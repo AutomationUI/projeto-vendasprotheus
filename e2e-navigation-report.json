@@ -1,0 +1,805 @@
+[
+  {
+    "module": "Dashboard",
+    "item": "Dashboard",
+    "expectedUrl": "/dashboard",
+    "actualUrl": "http://localhost:3000/dashboard",
+    "status": "FAIL",
+    "pageRendered": false,
+    "consoleErrors": [
+      "[Console] WebSocket connection to 'wss://websocket-full.internal/ws' failed: Error in connection establishment: net::ERR_NAME_NOT_RESOLVED"
+    ],
+    "networkErrors": [],
+    "error": "Erro de renderização"
+  },
+  {
+    "module": "Dashboard",
+    "item": "Visão Geral (KPIs)",
+    "expectedUrl": "/dashboard?tab=analytics",
+    "actualUrl": "http://localhost:3000/dashboard?tab=analytics",
+    "status": "FAIL",
+    "pageRendered": false,
+    "consoleErrors": [
+      "[Console] WebSocket connection to 'wss://websocket-full.internal/ws' failed: Error in connection establishment: net::ERR_NAME_NOT_RESOLVED"
+    ],
+    "networkErrors": [],
+    "error": "Erro de renderização"
+  },
+  {
+    "module": "Dashboard",
+    "item": "Funil Comercial & Metas",
+    "expectedUrl": "/dashboard?tab=crm",
+    "actualUrl": "http://localhost:3000/dashboard?tab=crm",
+    "status": "FAIL",
+    "pageRendered": false,
+    "consoleErrors": [
+      "[Console] WebSocket connection to 'wss://websocket-full.internal/ws' failed: Error in connection establishment: net::ERR_NAME_NOT_RESOLVED"
+    ],
+    "networkErrors": [],
+    "error": "Erro de renderização"
+  },
+  {
+    "module": "Clientes",
+    "item": "Clientes",
+    "expectedUrl": "/clientes",
+    "actualUrl": "http://localhost:3000/clientes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Clientes",
+    "item": "Carteira de Clientes",
+    "expectedUrl": "/clientes",
+    "actualUrl": "http://localhost:3000/clientes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Clientes",
+    "item": "Novo Cliente",
+    "expectedUrl": "/clientes/new",
+    "actualUrl": "http://localhost:3000/clientes/new",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Produtos",
+    "item": "Produtos",
+    "expectedUrl": "/produtos",
+    "actualUrl": "http://localhost:3000/produtos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Produtos",
+    "item": "Catálogo de Produtos",
+    "expectedUrl": "/produtos",
+    "actualUrl": "http://localhost:3000/produtos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Produtos",
+    "item": "Novo Produto",
+    "expectedUrl": "/produtos/new",
+    "actualUrl": "http://localhost:3000/produtos/new",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Produtos",
+    "item": "Alerta de Estoque Baixo",
+    "expectedUrl": "/produtos?filter=low-stock",
+    "actualUrl": "http://localhost:3000/produtos?filter=low-stock",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Orçamentos",
+    "item": "Orçamentos",
+    "expectedUrl": "/orcamentos",
+    "actualUrl": "http://localhost:3000/orcamentos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Orçamentos",
+    "item": "Propostas Comerciais",
+    "expectedUrl": "/orcamentos",
+    "actualUrl": "http://localhost:3000/orcamentos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Orçamentos",
+    "item": "Novo Orçamento",
+    "expectedUrl": "/orcamentos/new",
+    "actualUrl": "http://localhost:3000/orcamentos/new",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Orçamentos",
+    "item": "Aguardando Resposta",
+    "expectedUrl": "/orcamentos?status=aguardando",
+    "actualUrl": "http://localhost:3000/orcamentos?status=aguardando",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Pedidos",
+    "item": "Pedidos",
+    "expectedUrl": "/pedidos",
+    "actualUrl": "http://localhost:3000/pedidos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Pedidos",
+    "item": "Esteira de Pedidos",
+    "expectedUrl": "/pedidos",
+    "actualUrl": "http://localhost:3000/pedidos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Pedidos",
+    "item": "Novo Pedido",
+    "expectedUrl": "/pedidos/new",
+    "actualUrl": "http://localhost:3000/pedidos/new",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Pedidos",
+    "item": "Aguardando Liberação2",
+    "expectedUrl": "/pedidos",
+    "actualUrl": "http://localhost:3000/pedidos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Pedidos",
+    "item": "Pedidos Faturados",
+    "expectedUrl": "/pedidos?status=Faturado",
+    "actualUrl": "http://localhost:3000/pedidos?status=Faturado",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Aprovações",
+    "item": "Aprovações",
+    "expectedUrl": "/aprovacoes",
+    "actualUrl": "http://localhost:3000/aprovacoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Aprovações",
+    "item": "Fila de Aprovações",
+    "expectedUrl": "/aprovacoes",
+    "actualUrl": "http://localhost:3000/aprovacoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Aprovações",
+    "item": "Pendências de Alçada4",
+    "expectedUrl": "/aprovacoes",
+    "actualUrl": "http://localhost:3000/aprovacoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Aprovações",
+    "item": "Histórico de Decisões",
+    "expectedUrl": "/aprovacoes?status=historico",
+    "actualUrl": "http://localhost:3000/aprovacoes?status=historico",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração & Multi-ERP",
+    "item": "Integração & Multi-ERP",
+    "expectedUrl": "/integracao-erp",
+    "actualUrl": "http://localhost:3000/integracao-erp",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração & Multi-ERP",
+    "item": "Hub Multi-ERP (Protheus, SAP, Omie)",
+    "expectedUrl": "/integracao-erp?tab=multierp",
+    "actualUrl": "http://localhost:3000/integracao-erp?tab=multierp",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração & Multi-ERP",
+    "item": "Monitor de Conectores",
+    "expectedUrl": "/integracao-erp",
+    "actualUrl": "http://localhost:3000/integracao-erp",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração & Multi-ERP",
+    "item": "Sincronização & Tabelas",
+    "expectedUrl": "/integracao-erp?tab=sync",
+    "actualUrl": "http://localhost:3000/integracao-erp?tab=sync",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [
+      "[Console] Failed to load resource: the server responded with a status of 404 ()",
+      "[Console] Failed to load resource: the server responded with a status of 404 ()",
+      "[Console] Failed to load resource: the server responded with a status of 404 ()",
+      "[Console] Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração & Multi-ERP",
+    "item": "Logs & Diagnósticos",
+    "expectedUrl": "/integracao-erp?tab=logs",
+    "actualUrl": "http://localhost:3000/integracao-erp?tab=logs",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração Bancária",
+    "item": "Integração Bancária",
+    "expectedUrl": "/integracao-bancaria",
+    "actualUrl": "http://localhost:3000/integracao-bancaria",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração Bancária",
+    "item": "Contas & Saldos Bancários",
+    "expectedUrl": "/integracao-bancaria/contas",
+    "actualUrl": "http://localhost:3000/integracao-bancaria/contas",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração Bancária",
+    "item": "Remessa & Retorno CNAB",
+    "expectedUrl": "/integracao-bancaria/cnab",
+    "actualUrl": "http://localhost:3000/integracao-bancaria/cnab",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração Bancária",
+    "item": "Conciliação de Extratos",
+    "expectedUrl": "/integracao-bancaria/conciliacao",
+    "actualUrl": "http://localhost:3000/integracao-bancaria/conciliacao",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração Bancária",
+    "item": "Gateways PIX & Boletos",
+    "expectedUrl": "/integracao-bancaria/pix-boletos",
+    "actualUrl": "http://localhost:3000/integracao-bancaria/pix-boletos",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Integração Bancária",
+    "item": "Logs & Webhooks",
+    "expectedUrl": "/integracao-bancaria/webhooks",
+    "actualUrl": "http://localhost:3000/integracao-bancaria/webhooks",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Produção",
+    "item": "Produção",
+    "expectedUrl": "/producao",
+    "actualUrl": "http://localhost:3000/producao",
+    "status": "FAIL",
+    "pageRendered": false,
+    "consoleErrors": [
+      "[Console] WebSocket connection to 'wss://websocket-full.internal/ws' failed: Error in connection establishment: net::ERR_NAME_NOT_RESOLVED"
+    ],
+    "networkErrors": [],
+    "error": "Erro de renderização"
+  },
+  {
+    "module": "Produção",
+    "item": "Ordens de Produção (OP)",
+    "expectedUrl": "/producao",
+    "actualUrl": "http://localhost:3000/producao",
+    "status": "FAIL",
+    "pageRendered": false,
+    "consoleErrors": [
+      "[Console] WebSocket connection to 'wss://websocket-full.internal/ws' failed: Error in connection establishment: net::ERR_NAME_NOT_RESOLVED"
+    ],
+    "networkErrors": [],
+    "error": "Erro de renderização"
+  },
+  {
+    "module": "Produção",
+    "item": "Lotes Atrasados1",
+    "expectedUrl": "/producao",
+    "actualUrl": "http://localhost:3000/producao",
+    "status": "FAIL",
+    "pageRendered": false,
+    "consoleErrors": [
+      "[Console] WebSocket connection to 'wss://websocket-full.internal/ws' failed: Error in connection establishment: net::ERR_NAME_NOT_RESOLVED"
+    ],
+    "networkErrors": [],
+    "error": "Erro de renderização"
+  },
+  {
+    "module": "Representantes",
+    "item": "Representantes",
+    "expectedUrl": "/representantes",
+    "actualUrl": "http://localhost:3000/representantes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Representantes",
+    "item": "Força de Vendas & Equipe",
+    "expectedUrl": "/representantes?tab=equipe",
+    "actualUrl": "http://localhost:3000/representantes?tab=equipe",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Representantes",
+    "item": "Carteira de Contas",
+    "expectedUrl": "/representantes?tab=carteira",
+    "actualUrl": "http://localhost:3000/representantes?tab=carteira",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Representantes",
+    "item": "Metas & Performance",
+    "expectedUrl": "/representantes?tab=metas",
+    "actualUrl": "http://localhost:3000/representantes?tab=metas",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Representantes",
+    "item": "Extrato de Comissões",
+    "expectedUrl": "/representantes/comissoes",
+    "actualUrl": "http://localhost:3000/representantes/comissoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Governance Studio",
+    "item": "Governance Studio",
+    "expectedUrl": "/governance",
+    "actualUrl": "http://localhost:3000/governance",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Governance Studio",
+    "item": "Matriz de Governança",
+    "expectedUrl": "/governance?tab=overview",
+    "actualUrl": "http://localhost:3000/governance?tab=overview",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Governance Studio",
+    "item": "Alçadas & Regras de Desconto",
+    "expectedUrl": "/governance?tab=rules",
+    "actualUrl": "http://localhost:3000/governance?tab=rules",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Governance Studio",
+    "item": "Políticas de Comissionamento",
+    "expectedUrl": "/governance?tab=policies",
+    "actualUrl": "http://localhost:3000/governance?tab=policies",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Governance Studio",
+    "item": "Biblioteca de Normas & Políticas",
+    "expectedUrl": "/governance?tab=documents",
+    "actualUrl": "http://localhost:3000/governance?tab=documents",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Flow Studio (CRM)",
+    "item": "Flow Studio (CRM)",
+    "expectedUrl": "/crm-flow",
+    "actualUrl": "http://localhost:3000/crm-flow",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "networkErrors": [
+      "[Network 401] http://localhost:3000/api/v1/flows",
+      "[Network 401] http://localhost:3000/api/v1/flows"
+    ]
+  },
+  {
+    "module": "Flow Studio (CRM)",
+    "item": "Editor Visual de Workflows",
+    "expectedUrl": "/crm-flow?tab=canvas",
+    "actualUrl": "http://localhost:3000/login",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "networkErrors": [
+      "[Network 401] http://localhost:3000/api/v1/flows",
+      "[Network 401] http://localhost:3000/api/v1/flows"
+    ]
+  },
+  {
+    "module": "Flow Studio (CRM)",
+    "item": "Fluxos de Automação Ativos",
+    "expectedUrl": "/crm-flow?tab=analytics",
+    "actualUrl": "http://localhost:3000/login",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "networkErrors": [
+      "[Network 401] http://localhost:3000/api/v1/flows",
+      "[Network 401] http://localhost:3000/api/v1/flows"
+    ]
+  },
+  {
+    "module": "Flow Studio (CRM)",
+    "item": "Simulação & Testes",
+    "expectedUrl": "/crm-flow?tab=simulation",
+    "actualUrl": "http://localhost:3000/login",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "networkErrors": [
+      "[Network 401] http://localhost:3000/api/v1/flows",
+      "[Network 401] http://localhost:3000/api/v1/flows"
+    ]
+  },
+  {
+    "module": "Flow Studio (CRM)",
+    "item": "Hub de Conectores",
+    "expectedUrl": "/crm-flow?tab=connectors",
+    "actualUrl": "http://localhost:3000/login",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[Console] Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "networkErrors": [
+      "[Network 401] http://localhost:3000/api/v1/flows",
+      "[Network 401] http://localhost:3000/api/v1/flows"
+    ]
+  },
+  {
+    "module": "Relatórios",
+    "item": "Relatórios",
+    "expectedUrl": "/relatorios",
+    "actualUrl": "http://localhost:3000/relatorios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Relatórios",
+    "item": "Central Analítica (BI)",
+    "expectedUrl": "/relatorios",
+    "actualUrl": "http://localhost:3000/relatorios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Relatórios",
+    "item": "Relatório de Vendas & Margem",
+    "expectedUrl": "/relatorios",
+    "actualUrl": "http://localhost:3000/relatorios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Relatórios",
+    "item": "Relatório Financeiro & DRE",
+    "expectedUrl": "/relatorios",
+    "actualUrl": "http://localhost:3000/relatorios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Financeiro",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Painel Financeiro (Visão Geral)",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Fluxo de Caixa Projetado",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Contas a Receber (SE1)",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Contas a Pagar (SE2)",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Análise de Crédito do Cliente",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Régua de Cobrança",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Financeiro",
+    "item": "Conciliação Bancária",
+    "expectedUrl": "/financeiro",
+    "actualUrl": "http://localhost:3000/financeiro",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Configurações",
+    "item": "Configurações",
+    "expectedUrl": "/configuracoes",
+    "actualUrl": "http://localhost:3000/configuracoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Configurações",
+    "item": "Regras Comerciais Globais",
+    "expectedUrl": "/configuracoes",
+    "actualUrl": "http://localhost:3000/configuracoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Configurações",
+    "item": "Segurança & 2FA",
+    "expectedUrl": "/configuracoes",
+    "actualUrl": "http://localhost:3000/configuracoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Configurações",
+    "item": "Documentos & White-label",
+    "expectedUrl": "/configuracoes",
+    "actualUrl": "http://localhost:3000/configuracoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Configurações",
+    "item": "Modelos de Mensagens & Email",
+    "expectedUrl": "/configuracoes",
+    "actualUrl": "http://localhost:3000/configuracoes",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Auditoria",
+    "item": "Auditoria",
+    "expectedUrl": "/auditoria",
+    "actualUrl": "http://localhost:3000/auditoria",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Auditoria",
+    "item": "Trilha de Auditoria (Logs)",
+    "expectedUrl": "/auditoria",
+    "actualUrl": "http://localhost:3000/auditoria",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Usuários",
+    "item": "Usuários",
+    "expectedUrl": "/usuarios",
+    "actualUrl": "http://localhost:3000/usuarios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Usuários",
+    "item": "Gestão de Usuários",
+    "expectedUrl": "/usuarios",
+    "actualUrl": "http://localhost:3000/usuarios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Usuários",
+    "item": "Novo Usuário",
+    "expectedUrl": "/usuarios/new",
+    "actualUrl": "http://localhost:3000/usuarios/new",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  },
+  {
+    "module": "Usuários",
+    "item": "Perfis & Matriz RBAC",
+    "expectedUrl": "/usuarios",
+    "actualUrl": "http://localhost:3000/usuarios",
+    "status": "PASS",
+    "pageRendered": true,
+    "consoleErrors": [],
+    "networkErrors": []
+  }
+]

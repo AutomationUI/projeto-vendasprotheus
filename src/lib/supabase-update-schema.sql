@@ -72,10 +72,12 @@ CREATE TABLE IF NOT EXISTS public.clientes (
     total_compras NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
     ultima_compra TIMESTAMPTZ,
     erp_id TEXT,
+    status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo', 'prospect', 'bloqueado')),
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 SELECT add_column_if_not_exists('clientes', 'organization_id', 'UUID REFERENCES public.organizations(id) ON DELETE CASCADE');
+SELECT add_column_if_not_exists('clientes', 'status', "TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo', 'prospect', 'bloqueado'))");
 
 -- PRODUTOS
 CREATE TABLE IF NOT EXISTS public.produtos (
